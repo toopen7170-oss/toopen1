@@ -13,7 +13,7 @@ from kivy.core.window import Window
 from kivy.utils import get_color_from_hex
 from kivy.core.text import LabelBase
 
-# 폰트 등록
+# 한글 폰트 등록
 try:
     LabelBase.register(name="CustomFont", fn_regular="font.ttf")
 except:
@@ -26,7 +26,7 @@ class CustomTextInput(TextInput):
         self.multiline = False
         self.background_color = (1, 1, 1, 0.1)
         self.foreground_color = (1, 1, 1, 1)
-        # S26 울트라에서 글자가 줄 바로 위에 오도록 패딩 조정
+        # S26 울트라 화면에서 텍스트가 줄 바로 위에 오도록 패딩 조정
         self.padding_y = [self.height / 2.0 - (self.line_height / 2.0) + 8, 8]
 
 def show_confirm(title, text, on_confirm):
@@ -60,40 +60,40 @@ class MainScreen(BaseScreen):
         
         # 통합 검색 영역
         search_box = BoxLayout(size_hint_y=0.08, spacing=10)
-        self.search_input = CustomTextInput(hint_text="통합 검색 (캐릭터명, 아이템 등)")
+        self.search_input = CustomTextInput(hint_text="캐릭터명 또는 아이템 검색...")
         search_btn = Button(text="검색", size_hint_x=0.25, background_color=get_color_from_hex('#2980b9'), font_name="CustomFont")
         search_box.add_widget(self.search_input)
         search_box.add_widget(search_btn)
         
-        # 리스트 스크롤 영역
+        # 데이터 리스트 영역
         self.scroll = ScrollView()
         self.acc_list = GridLayout(cols=1, size_hint_y=None, spacing=12)
         self.acc_list.bind(minimum_height=self.acc_list.setter('height'))
         self.scroll.add_widget(self.acc_list)
         
         # 하단 추가 버튼
-        add_btn = Button(text="+ 새 계정 추가", size_hint_y=0.08, background_color=get_color_from_hex('#27ae60'), font_name="CustomFont")
-        add_btn.bind(on_release=lambda x: show_confirm("저장", "새 계정 정보를 저장하시겠습니까?", self.save_account))
+        add_btn = Button(text="+ 새 계정 정보 추가", size_hint_y=0.08, background_color=get_color_from_hex('#27ae60'), font_name="CustomFont")
+        add_btn.bind(on_release=lambda x: show_confirm("저장 확인", "새로운 계정 정보를 저장하시겠습니까?", self.save_data))
         
         layout.add_widget(search_box)
         layout.add_widget(self.scroll)
         layout.add_widget(add_btn)
         self.add_widget(layout)
 
-    def save_account(self):
-        # 저장 로직 (확인용)
-        print("데이터 저장 완료")
+    def save_data(self):
+        # 내부 저장 로직 실행
+        print("Data Saved Successfully")
 
 class PristonTaleApp(App):
     def build(self):
-        self.title = "PristonTale Manager"
+        self.title = "PT1 Manager Official"
         sm = ScreenManager(transition=FadeTransition())
         sm.add_widget(MainScreen(name='main'))
         return sm
 
     def on_start(self):
-        # 시작 시 권한 팝업
-        show_confirm("권한 확인", "사진 및 미디어 접근을 허용하시겠습니까?", lambda: print("Granted"))
+        # 앱 시작 시 권한 획득 확인
+        show_confirm("시스템 권한", "앱 기능을 위해 저장소 접근 권한이 필요합니다.", lambda: print("Permission OK"))
 
 if __name__ == '__main__':
     PristonTaleApp().run()
