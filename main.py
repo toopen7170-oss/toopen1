@@ -60,22 +60,22 @@ class MainScreen(BaseScreen):
         super().__init__(**kwargs)
         layout = BoxLayout(orientation='vertical', padding=20, spacing=15)
         
-        # 통합 검색 영역
+        # 검색바
         search_box = BoxLayout(size_hint_y=0.08, spacing=10)
-        self.search_input = CustomTextInput(hint_text="검색어를 입력하세요...")
+        self.search_input = CustomTextInput(hint_text="캐릭터/아이템 검색")
         search_btn = Button(text="검색", size_hint_x=0.25, background_color=get_color_from_hex('#2980b9'), font_name="CustomFont")
         search_box.add_widget(self.search_input)
         search_box.add_widget(search_btn)
         
-        # 리스트 영역
+        # 리스트
         self.scroll = ScrollView()
         self.acc_list = GridLayout(cols=1, size_hint_y=None, spacing=12)
         self.acc_list.bind(minimum_height=self.acc_list.setter('height'))
         self.scroll.add_widget(self.acc_list)
         
         # 추가 버튼
-        add_btn = Button(text="+ 새 항목 추가", size_hint_y=0.08, background_color=get_color_from_hex('#27ae60'), font_name="CustomFont")
-        add_btn.bind(on_release=lambda x: show_confirm("저장", "새 정보를 저장하시겠습니까?", self.save_data))
+        add_btn = Button(text="+ 정보 추가", size_hint_y=0.08, background_color=get_color_from_hex('#27ae60'), font_name="CustomFont")
+        add_btn.bind(on_release=lambda x: show_confirm("저장", "데이터를 저장하시겠습니까?", self.save_data))
         
         layout.add_widget(search_box)
         layout.add_widget(self.scroll)
@@ -83,7 +83,7 @@ class MainScreen(BaseScreen):
         self.add_widget(layout)
 
     def save_data(self):
-        print("Data saved successfully.")
+        print("Data saved.")
 
 class PristonTaleApp(App):
     def build(self):
@@ -93,8 +93,7 @@ class PristonTaleApp(App):
         return sm
 
     def on_start(self):
-        # 권한 확인 팝업
-        show_confirm("권한", "미디어 접근 권한이 필요합니다.", lambda: print("Permission OK"))
+        show_confirm("권한 확인", "시스템 접근 권한이 필요합니다.", lambda: print("OK"))
 
 if __name__ == '__main__':
     PristonTaleApp().run()
