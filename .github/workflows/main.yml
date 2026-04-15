@@ -17,13 +17,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential libsqlite3-dev sqlite3 bzip2 libbz2-dev zlib1g-dev libgdbm-dev libncurses5-dev libssl-dev libreadline-dev uuid-dev libffi-dev tk-dev wget curl git zip unzip lld libtinfo5
           
-      - name: Install Build Tools
+      - name: Install Buildozer & Cython
         run: |
           pip install --upgrade pip
           pip install buildozer cython==0.29.33 kivy
           
-      - name: Accept Android SDK Licenses
+      - name: Accept Android SDK Licenses (Final Fix)
         run: |
+          mkdir -p ~/.android
+          touch ~/.android/repositories.cfg
+          # 모든 라이선스에 대해 자동으로 yes를 응답하여 빌드 중단 방지
+          yes | sdkmanager --licenses || true
           yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
           
       - name: Build with Buildozer
