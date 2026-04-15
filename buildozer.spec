@@ -12,16 +12,16 @@ source.include_patterns = assets/*,images/*
 icon.filename = icon.png
 presplash.filename = bg.png
 
-# 빌드 사양 (S26 울트라 대응 및 버전 고정)
+# 빌드 사양 (JDK 17 및 S26 울트라 대응)
 orientation = portrait
 fullscreen = 1
 android.archs = arm64-v8a
 android.api = 34
 android.minapi = 21
 android.ndk = 25b
-# 최신 37 버전의 라이선스 꼬임 방지를 위해 34 버전 강제 사용
 android.build_tools_version = 34.0.0
 android.accept_sdk_license = True
+android.skip_update = False
 
 # 권한 설정
 android.permissions = READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE, CAMERA, READ_MEDIA_IMAGES
