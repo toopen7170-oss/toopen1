@@ -12,135 +12,123 @@ from kivy.uix.image import Image
 from kivy.core.window import Window
 from kivy.utils import get_color_from_hex
 from kivy.core.text import LabelBase
+from kivy.properties import StringProperty
 
-# 폰트 등록 (한글 깨짐 방지)
+# 한글 폰트 등록
 try:
     LabelBase.register(name="CustomFont", fn_regular="font.ttf")
 except:
     pass
 
 class CustomTextInput(TextInput):
-    """S26 울트라 최적화: 글자가 입력선 바로 위에 오도록 패딩 조정"""
+    """S26 울트라 보정: 글자가 입력선 바로 위에 오도록 설정"""
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.font_name = "CustomFont"
         self.multiline = False
-        self.background_color = (1, 1, 1, 0.15)
-        self.foreground_color = (1, 1, 1, 1)
-        self.cursor_color = get_color_from_hex('#3498db')
-        self.padding_y = [self.height / 2.0 - (self.line_height / 2.0) + 10, 10]
-
-def show_confirm(title, text, on_confirm):
-    """스크린샷 73755.jpg 스타일의 확인 팝업"""
-    content = BoxLayout(orientation='vertical', padding=20, spacing=20)
-    content.add_widget(Label(text=text, font_name="CustomFont", font_size='18sp', halign='center'))
-    
-    btns = BoxLayout(size_hint_y=0.4, spacing=15)
-    ok_btn = Button(text="확인", background_color=get_color_from_hex('#1a4361'), font_name="CustomFont")
-    cancel_btn = Button(text="취소", background_color=get_color_from_hex('#444444'), font_name="CustomFont")
-    
-    popup = Popup(title=title, content=content, size_hint=(0.85, 0.4), title_font="CustomFont")
-    
-    ok_btn.bind(on_release=lambda x: [on_confirm(), popup.dismiss()])
-    cancel_btn.bind(on_release=popup.dismiss)
-    
-    btns.add_widget(ok_btn)
-    btns.add_widget(cancel_btn)
-    content.add_widget(btns)
-    popup.open()
+        self.background_color = (0.95, 0.95, 0.95, 1)
+        self.padding_y = [self.height / 2.0 - (self.line_height / 2.0) + 5, 5]
 
 class BaseScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         with self.canvas.before:
-            # 스크린샷 73753.jpg 스타일 배경
+            # 배경화면 유지
             self.bg = Image(source='bg.png', allow_stretch=True, keep_ratio=False, size=Window.size)
 
 class MainScreen(BaseScreen):
-    """메인 화면: 검색 및 계정 목록"""
+    """사진 72696 스타일 재현"""
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        layout = BoxLayout(orientation='vertical', padding=20, spacing=15)
+        layout = BoxLayout(orientation='vertical', padding=[20, 50, 20, 20], spacing=15)
         
-        # 상단 검색바
-        search_box = BoxLayout(size_hint_y=0.08, spacing=10)
-        self.search_input = CustomTextInput(hint_text="캐릭터/아이템 검색")
-        search_btn = Button(text="검색", size_hint_x=0.25, background_color=get_color_from_hex('#0d2a3d'), font_name="CustomFont")
-        search_box.add_widget(self.search_input)
-        search_box.add_widget(search_btn)
+        # 타이틀
+        layout.add_widget(Label(text="[PT1 통합 매니저]", font_name="CustomFont", font_size='26sp', size_hint_y=0.08))
         
-        # 계정 리스트 영역
+        # 검색바 (사진 72696 스타일)
+        search_area = BoxLayout(size_hint_y=0.08, spacing=2)
+        self.search_input = CustomTextInput(hint_text="계정/캐릭터 검색...")
+        search_btn = Button(text="검색", size_hint_x=0.25, background_color=get_color_from_hex('#1a3a5a'), font_name="CustomFont")
+        search_area.add_widget(self.search_input)
+        search_area.add_widget(search_btn)
+        layout.add_widget(search_area)
+        
+        # 새 계정 만들기 버튼 (초록색)
+        add_btn = Button(text="+ 새 계정 만들기", size_hint_y=0.08, background_color=get_color_from_hex('#27ae60'), font_name="CustomFont")
+        add_btn.bind(on_release=self.show_add_popup)
+        layout.add_widget(add_btn)
+        
+        # 계정 리스트 (사진 72696 삭제 버튼 포함)
         self.scroll = ScrollView()
         self.acc_list = GridLayout(cols=1, size_hint_y=None, spacing=10)
         self.acc_list.bind(minimum_height=self.acc_list.setter('height'))
         self.scroll.add_widget(self.acc_list)
-        
-        # 하단 계정 추가 버튼
-        add_btn = Button(text="+ 새 계정 만들기", size_hint_y=0.08, background_color=get_color_from_hex('#1e5631'), font_name="CustomFont")
-        add_btn.bind(on_release=self.go_to_manage)
-        
-        layout.add_widget(search_box)
         layout.add_widget(self.scroll)
-        layout.add_widget(add_btn)
+        
         self.add_widget(layout)
+        # 초기 데이터 로드 시뮬레이션
+        self.refresh_list(["toopen", "toopen0", "toopen9"])
 
-    def go_to_manage(self, instance):
-        self.manager.current = 'manage'
+    def refresh_list(self, accounts):
+        self.acc_list.clear_widgets()
+        for acc in accounts:
+            row = BoxLayout(size_hint_y=None, height=75, spacing=5)
+            # 계정 버튼 (파란색 바)
+            btn = Button(text=f"계정: {acc}", background_color=get_color_from_hex('#1e3a5f'), font_name="CustomFont", padding=(20, 0))
+            btn.bind(on_release=lambda x, a=acc: self.go_to_slots(a))
+            # 삭제 버튼 (빨간색 X)
+            del_btn = Button(text="X", size_hint_x=0.22, background_color=get_color_from_hex('#5a1a1a'), font_name="CustomFont")
+            
+            row.add_widget(btn)
+            row.add_widget(del_btn)
+            self.acc_list.add_widget(row)
 
-class AccountManageScreen(BaseScreen):
-    """계정 관리 창: 정보 입력, 저장 및 삭제"""
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        layout = BoxLayout(orientation='vertical', padding=30, spacing=20)
+    def show_add_popup(self, instance):
+        """사진 73235 스타일의 생성 팝업"""
+        content = BoxLayout(orientation='vertical', padding=15, spacing=15)
+        self.new_id = CustomTextInput(hint_text="생성할 계정 ID")
+        done_btn = Button(text="생성 완료", size_hint_y=0.4, background_color=get_color_from_hex('#1e5631'), font_name="CustomFont")
+        content.add_widget(self.new_id)
+        content.add_widget(done_btn)
         
-        layout.add_widget(Label(text="[ 계정 정보 설정 ]", font_name="CustomFont", font_size='22sp', size_hint_y=0.1))
+        popup = Popup(title="계정 생성", content=content, size_hint=(0.8, 0.4), title_font="CustomFont")
+        done_btn.bind(on_release=popup.dismiss)
+        popup.open()
+
+    def go_to_slots(self, acc_name):
+        self.manager.get_screen('slots').target_account = acc_name
+        self.manager.current = 'slots'
+
+class SlotScreen(BaseScreen):
+    """사진 73193 스타일 재현: 6개 슬롯 화면"""
+    target_account = StringProperty("")
+
+    def on_enter(self):
+        self.clear_widgets()
+        layout = BoxLayout(orientation='vertical', padding=25, spacing=20)
         
-        # 입력 필드들
-        self.id_input = CustomTextInput(hint_text="계정 ID 입력")
-        self.pw_input = CustomTextInput(hint_text="비밀번호 입력")
-        self.char_input = CustomTextInput(hint_text="대표 캐릭터명")
+        # 타이틀
+        layout.add_widget(Label(text=f"[{self.target_account}] 캐릭터 선택", font_name="CustomFont", font_size='20sp', size_hint_y=0.1))
         
-        layout.add_widget(self.id_input)
-        layout.add_widget(self.pw_input)
-        layout.add_widget(self.char_input)
+        # 6개 슬롯 (2열 3행 그리드)
+        grid = GridLayout(cols=2, spacing=12, size_hint_y=0.7)
+        for i in range(1, 7):
+            btn = Button(text=f"슬롯 {i}", background_color=get_color_from_hex('#4a5a8a'), font_name="CustomFont")
+            grid.add_widget(btn)
+        layout.add_widget(grid)
         
-        # 버튼 영역
-        btn_layout = BoxLayout(size_hint_y=0.15, spacing=15)
-        save_btn = Button(text="계정 저장", background_color=get_color_from_hex('#2980b9'), font_name="CustomFont")
-        del_btn = Button(text="계정 삭제", background_color=get_color_from_hex('#c0392b'), font_name="CustomFont")
-        back_btn = Button(text="뒤로가기", background_color=get_color_from_hex('#7f8c8d'), font_name="CustomFont")
+        # 하단 처음으로 버튼
+        back_btn = Button(text="처음으로", size_hint_y=0.1, background_color=get_color_from_hex('#555555'), font_name="CustomFont")
+        back_btn.bind(on_release=lambda x: setattr(self.manager, 'current', 'main'))
+        layout.add_widget(back_btn)
         
-        save_btn.bind(on_release=lambda x: show_confirm("저장", "이 계정 정보를 저장할까요?", self.save_process))
-        del_btn.bind(on_release=lambda x: show_confirm("삭제", "정말로 이 정보를 삭제하시겠습니까?", self.delete_process))
-        back_btn.bind(on_release=self.go_back)
-        
-        btn_layout.add_widget(save_btn)
-        btn_layout.add_widget(del_btn)
-        btn_layout.add_widget(back_btn)
-        
-        layout.add_widget(btn_layout)
-        layout.add_widget(BoxLayout(size_hint_y=0.3)) # 하단 여백
         self.add_widget(layout)
-
-    def save_process(self):
-        # 실제 저장 로직 (DB 또는 파일 저장) 수행 지점
-        print(f"Saving: {self.id_input.text}")
-        self.manager.current = 'main'
-
-    def delete_process(self):
-        # 실제 삭제 로직 수행 지점
-        print("Data Deleted")
-        self.manager.current = 'main'
-
-    def go_back(self, instance):
-        self.manager.current = 'main'
 
 class PristonTaleApp(App):
     def build(self):
-        self.title = "PT1 Manager Official"
         sm = ScreenManager(transition=FadeTransition())
         sm.add_widget(MainScreen(name='main'))
-        sm.add_widget(AccountManageScreen(name='manage'))
+        sm.add_widget(SlotScreen(name='slots'))
         return sm
 
 if __name__ == '__main__':
