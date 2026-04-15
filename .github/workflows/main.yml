@@ -6,18 +6,29 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
+      
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-      - name: Install dependencies
+          
+      - name: Install System Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential libsqlite3-dev sqlite3 bzip2 libbz2-dev zlib1g-dev libgdbm-dev libncurses5-dev libssl-dev libreadline-dev uuid-dev libffi-dev tk-dev wget curl git zip unzip lld libtinfo5
+          
+      - name: Install Build Tools
+        run: |
           pip install --upgrade pip
           pip install buildozer cython==0.29.33 kivy
+          
+      - name: Accept Android SDK Licenses
+        run: |
+          yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          
       - name: Build with Buildozer
         run: buildozer android debug
+        
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
