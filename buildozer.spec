@@ -1,42 +1,109 @@
 [app]
 
-# (1) 앱 기본 정보
+# (str) Title of your application
 title = PristonTale
+
+# (str) Package name
 package.name = pristontale
+
+# (str) Package domain (needed for android packaging)
 package.domain = org.toopen7170
 
-# (2) 소스 및 리소스 포함 (폰트 깨짐 방지 핵심)
+# (str) Source code where the main.py live
 source.dir = .
-source.include_exts = py,png,jpg,ttf,kv
-source.include_patterns = font.ttf, bg.png, icon.png, assets/*
-version = 1.0.5
 
-# (3) 필수 요구 라이브러리
+# (list) Source files to include (let empty to include all the files)
+source.include_exts = py,png,jpg,ttf,kv
+
+# (list) List of inclusions using pattern matching
+# 배경이미지(bg.png), 폰트(font.ttf), 아이콘(icon.png)을 명시적으로 포함
+source.include_patterns = font.ttf, bg.png, icon.png
+
+# (str) Application versioning (method 1)
+version = 1.0.0
+
+# (list) Application requirements
+# 자가 진단 및 이미지 처리를 위한 pillow 포함
 requirements = python3,kivy==2.3.0,pillow,android
 
-# (4) 아이콘 및 로딩 화면
-icon.filename = icon.png
+# (str) Custom source folders for requirements
+# 쓰지 않음
+
+# (str) Presplash of the application
 presplash.filename = bg.png
 
-# (5) 화면 설정 (S26 울트라 최적화)
+# (str) Icon of the application
+icon.filename = icon.png
+
+# (str) Supported orientations (one of landscape, sensorLandscape, portrait or all)
 orientation = portrait
+
+# (list) List of service to declare
+# services = NAME:ENTRYPOINT_PY
+
+#
+# Android specific
+#
+
+# (bool) Indicate if the application should be fullscreen or not
 fullscreen = 1
-android.archs = arm64-v8a
 
-# (6) 안드로이드 API 레벨 (최신 API 34 대응)
-android.api = 34
-android.minapi = 21
-android.ndk = 25b
-android.build_tools_version = 34.0.0
-android.accept_sdk_license = True
-
-# (7) 권한 설정 (사진 업로드 및 저장 무결점 활성화)
+# (list) Permissions
+# 사진 및 미디어 접근을 위한 필수 권한 설정
 android.permissions = READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE, CAMERA, READ_MEDIA_IMAGES
 
-# (8) 빌드 최적화
-android.release_artifact = aab
-android.copy_libs = 1
+# (int) Target Android API, should be as high as possible.
+android.api = 33
+
+# (int) Minimum API your APK will support.
+android.minapi = 21
+
+# (str) Android NDK version to use
+# android.ndk = 25b
+
+# (str) Android NDK directory (if empty, it will be automatically downloaded.)
+# android.ndk_path =
+
+# (str) Android SDK directory (if empty, it will be automatically downloaded.)
+# android.sdk_path =
+
+# (str) ANT directory (if empty, it will be automatically downloaded.)
+# android.ant_path =
+
+# (list) Android architectures to build for (S26 Ultra 최적화)
+android.archs = arm64-v8a
+
+# (bool) enables Android auto backup feature (default False)
+android.allow_backup = True
+
+# (str) The Android margin to use for the presplash
+# android.presplash_lottie = 
+
+# (list) The Android styles to apply to the activities
+# android.style = 
+
+#
+# Python for android (p4a) specific
+#
+
+# (str) python-for-android branch to use, defaults to master
+# p4a.branch = master
+
+
+#
+# Buildozer section
+#
 
 [buildozer]
+
+# (int) Log level (0 = error only, 1 = info, 2 = debug (with command output))
 log_level = 2
+
+# (int) Display warning if buildozer is run as root (0 = False, 1 = True)
 warn_on_root = 1
+
+# (str) Path to build artifacts, add %s for the name of the package
+# build_dir = ./.buildozer
+
+# (str) Path to bin directory
+# bin_dir = ./bin
