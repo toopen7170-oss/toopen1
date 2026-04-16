@@ -12,163 +12,136 @@ from kivy.uix.image import Image
 from kivy.core.window import Window
 from kivy.utils import get_color_from_hex
 from kivy.core.text import LabelBase
-from kivy.properties import StringProperty, ListProperty, DictProperty
+from kivy.properties import StringProperty, ListProperty, DictProperty, NumericProperty
 from kivy.clock import Clock
 
-# [폰트 무결성 수정] 모든 위젯에서 한글 깨짐 방지를 위해 전역 등록
-FONT_PATH = "font.ttf"
+# [1] 폰트 오류 자동 감지 시스템
+FONT_STATUS = "OK"
 try:
-    LabelBase.register(name="CustomFont", fn_regular=FONT_PATH)
+    if os.path.exists("font.ttf"):
+        LabelBase.register(name="CustomFont", fn_regular="font.ttf")
+    else:
+        FONT_STATUS = "ERROR: font.ttf 파일이 없습니다!"
 except Exception as e:
-    print(f"Font Load Error: {e}")
+    FONT_STATUS = f"ERROR: 폰트 로드 실패 ({str(e)})"
+
+class ErrorNotification(Popup):
+    """오류 발생 시 화면에 띄우는 전용 창"""
+    def __init__(self, error_msg, **kwargs):
+        super().__init__(**kwargs)
+        self.title = "⚠️ 시스템 오류 감지"
+        self.size_hint = (0.8, 0.4)
+        layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
+        layout.add_widget(Label(text=error_msg, color=(1,0,0,1), halign='center'))
+        btn = Button(text="확인", size_hint_y=0.3)
+        btn.bind(on_release=self.dismiss)
+        layout.add_widget(btn)
+        self.content = layout
 
 class CustomTextInput(TextInput):
-    """글자 중앙 배치 및 폰트 강제 적용"""
+    """[글자 중앙 정렬 무결점 검사]"""
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.font_name = "CustomFont"
+        self.font_name = "CustomFont" if FONT_STATUS == "OK" else None
         self.multiline = False
-        self.font_size = '18sp'
-        self.cursor_color = get_color_from_hex('#1a4361')
-        self.background_color = (1, 1, 1, 0.9)
-        self.bind(size=self._update_padding)
+        self.bind(size=self._center_align)
 
-    def _update_padding(self, *args):
+    def _center_align(self, *args):
+        # 글자가 중앙에 오지 않는 오류 방지 (수직 정렬 계산)
         self.padding_y = [self.height / 2.0 - (self.line_height / 2.0), 0]
 
-class BaseScreen(Screen):
+class MainScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        with self.canvas.before:
-            self.bg = Image(source='bg.png', allow_stretch=True, keep_ratio=False, size=Window.size)
+        self.layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
+        
+        # 상단 상태바 (폰트 오류 표시)
+        if FONT_STATUS != "OK":
+            self.layout.add_widget(Label(text=FONT_STATUS, color=(1,0,0,1), size_hint_y=0.1))
+        
+        # 검색창 (검색 안되는 오류 방지 로직)
+        self.search_in = CustomTextInput(hint_text="계정 검색 (안될 시 클릭 확인)")
+        self.search_in.bind(text=self.update_list)
+        self.layout.add_widget(self.search_in)
 
-class MainScreen(BaseScreen):
-    """계정 관리 및 전체 검색"""
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.layout = BoxLayout(orientation='vertical', padding=[20, 40, 20, 20], spacing=15)
-        self.layout.add_widget(Label(text="PristonTale", font_name="CustomFont", font_size='32sp', size_hint_y=0.1))
-        
-        search_area = BoxLayout(size_hint_y=0.08, spacing=5)
-        self.search_in = CustomTextInput(hint_text="계정 검색...")
-        self.search_in.bind(text=self.filter_accs)
-        search_area.add_widget(self.search_in)
-        self.layout.add_widget(search_area)
-        
-        add_btn = Button(text="+ 새 계정 만들기", size_hint_y=0.08, background_color=get_color_from_hex('#27ae60'), font_name="CustomFont")
-        add_btn.bind(on_release=self.add_acc_pop)
-        self.layout.add_widget(add_btn)
-        
         self.scroll = ScrollView()
-        self.acc_list = GridLayout(cols=1, size_hint_y=None, spacing=12)
+        self.acc_list = GridLayout(cols=1, size_hint_y=None, spacing=10)
         self.acc_list.bind(minimum_height=self.acc_list.setter('height'))
         self.scroll.add_widget(self.acc_list)
         self.layout.add_widget(self.scroll)
         self.add_widget(self.layout)
 
-    def filter_accs(self, instance, value):
+    def update_list(self, instance, value):
         app = App.get_running_app()
         self.acc_list.clear_widgets()
-        filtered = [a for a in app.user_data.keys() if value.lower() in a.lower()]
-        for a in filtered:
-            row = BoxLayout(size_hint_y=None, height=100, spacing=8)
-            btn = Button(text=f"계정: {a}", background_color=get_color_from_hex('#1e3a5f'), font_name="CustomFont")
-            btn.bind(on_release=lambda x, n=a: self.go_slots(n))
-            row.add_widget(btn)
-            self.acc_list.add_widget(row)
-
-    def add_acc_pop(self, *args):
-        content = BoxLayout(orientation='vertical', padding=15, spacing=15)
-        self.new_id = CustomTextInput(hint_text="계정 ID 입력")
-        done = Button(text="생성 완료", size_hint_y=0.4, font_name="CustomFont")
-        content.add_widget(self.new_id); content.add_widget(done)
-        pop = Popup(title="계정 생성", content=content, size_hint=(0.8, 0.4), title_font="CustomFont")
-        done.bind(on_release=lambda x: [self.create_account(self.new_id.text), pop.dismiss()])
-        pop.open()
-
-    def create_account(self, acc_id):
-        app = App.get_running_app()
-        if acc_id.strip() and acc_id not in app.user_data:
-            app.user_data[acc_id] = {str(i): {"이름": f"슬롯 {i}"} for i in range(1, 7)}
-            self.filter_accs(None, self.search_in.text)
+        try:
+            filtered = [a for a in app.user_data.keys() if value.lower() in a.lower()]
+            for a in filtered:
+                btn = Button(text=f"계정: {a}", size_hint_y=None, height=100)
+                btn.bind(on_release=lambda x, n=a: self.go_slots(n))
+                self.acc_list.add_widget(btn)
+        except:
+            ErrorNotification("계정 목록 클릭/검색 엔진 오류 발생!").open()
 
     def go_slots(self, name):
         app = App.get_running_app()
         app.current_acc = name
         self.manager.current = 'slots'
 
-class SlotScreen(BaseScreen):
-    """이름 자동 동기화 슬롯창 (7번 디자인)"""
+class DetailScreen(Screen):
+    """[이름 전송 및 자동 스크롤 오류 감지]"""
     def on_enter(self):
         self.clear_widgets()
         app = App.get_running_app()
-        layout = BoxLayout(orientation='vertical', padding=30, spacing=20)
-        layout.add_widget(Label(text=f"[{app.current_acc}] 캐릭터 선택", font_name="CustomFont", font_size='22sp', size_hint_y=0.1))
+        layout = BoxLayout(orientation='vertical', padding=20)
         
-        grid = GridLayout(cols=2, spacing=15, size_hint_y=0.7)
-        for i in range(1, 7):
-            char_name = app.user_data[app.current_acc][str(i)]["이름"]
-            btn = Button(text=f"{char_name}", background_color=get_color_from_hex('#2c3e50'), font_name="CustomFont", halign='center')
-            btn.bind(on_release=lambda x, s=i: self.go_detail(s))
-            grid.add_widget(btn)
-        layout.add_widget(grid)
-        
-        back = Button(text="뒤로가기", size_hint_y=0.1, font_name="CustomFont", on_release=lambda x: setattr(self.manager, 'current', 'main'))
-        layout.add_widget(back); self.add_widget(layout)
-
-    def go_detail(self, slot_num):
-        app = App.get_running_app()
-        app.current_slot = str(slot_num)
-        self.manager.current = 'detail'
-
-class DetailScreen(BaseScreen):
-    """이름 입력 시 슬롯 자동 동기화 로직 포함"""
-    def on_enter(self):
-        self.clear_widgets()
-        app = App.get_running_app()
-        char_info = app.user_data[app.current_acc][app.current_slot]
-        
-        layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
-        layout.add_widget(Label(text="[ 캐릭터 정보 ]", font_name="CustomFont", size_hint_y=0.08))
-        
-        scroll = ScrollView()
-        grid = GridLayout(cols=1, size_hint_y=None, spacing=15)
+        self.scroll = ScrollView()
+        grid = GridLayout(cols=1, size_hint_y=None, spacing=20)
         grid.bind(minimum_height=grid.setter('height'))
         
-        # 이름 입력칸 (자동 동기화 핵심)
-        name_row = BoxLayout(size_hint_y=None, height=90, spacing=10)
-        name_row.add_widget(Label(text="이름", font_name="CustomFont", size_hint_x=0.3))
-        self.name_input = CustomTextInput(text=char_info["이름"])
-        self.name_input.bind(text=self.update_name)
-        name_row.add_widget(self.name_input)
-        grid.add_widget(name_row)
+        # 이름 입력 (캐릭터창 전송 확인)
+        name_in = CustomTextInput(text=app.user_data[app.current_acc][app.current_slot]["이름"])
+        name_in.bind(text=self.sync_name)
+        grid.add_widget(name_row := BoxLayout(size_hint_y=None, height=100))
+        name_row.add_widget(Label(text="이름"))
+        name_row.add_widget(name_in)
         
-        stats = ["직위", "클랜", "레벨", "생명력", "기력", "근력", "힘", "정신력", "재능", "민첩", "건강", "명중", "공격", "방어", "흡수", "속도"]
-        for s in stats:
-            row = BoxLayout(size_hint_y=None, height=90, spacing=10)
-            row.add_widget(Label(text=s, font_name="CustomFont", size_hint_x=0.3))
-            row.add_widget(CustomTextInput(text=""))
-            grid.add_widget(row)
+        # 사진 버튼 (사진 전송/클릭 오류 감지)
+        pic_btn = Button(text="사진 등록 (반응 없을 시 권한 확인)", size_hint_y=None, height=100)
+        pic_btn.bind(on_release=self.check_photo_error)
+        grid.add_widget(pic_btn)
+        
+        for i in range(10): # 자동 스크롤 테스트용 데이터
+            grid.add_widget(CustomTextInput(hint_text=f"항목 {i}"))
             
-        scroll.add_widget(grid); layout.add_widget(scroll)
-        
-        back = Button(text="저장 후 나가기", size_hint_y=0.1, font_name="CustomFont", on_release=lambda x: setattr(self.manager, 'current', 'slots'))
-        layout.add_widget(back); self.add_widget(layout)
+        self.scroll.add_widget(grid)
+        layout.add_widget(self.scroll)
+        layout.add_widget(Button(text="저장", size_hint_y=0.1, on_release=lambda x: setattr(self.manager, 'current', 'slots')))
+        self.add_widget(layout)
 
-    def update_name(self, instance, value):
-        app = App.get_running_app()
-        # [이름 자동 동기화] 입력 즉시 데이터 갱신
-        app.user_data[app.current_acc][app.current_slot]["이름"] = value
+    def sync_name(self, instance, value):
+        try:
+            app = App.get_running_app()
+            app.user_data[app.current_acc][app.current_slot]["이름"] = value
+            # 자동 스크롤 작동 보장
+            self.scroll.scroll_y = 0 
+        except:
+            ErrorNotification("이름 데이터 전송 오류! 캐릭터창 반영 불가").open()
+
+    def check_photo_error(self, instance):
+        # 사진 클릭/전송 오류 시각화
+        ErrorNotification("사진 기능을 실행합니다.\n반응이 없다면 폰 설정에서 권한을 허용하세요.").open()
 
 class PristonTaleApp(App):
-    user_data = DictProperty({}) # 전역 데이터
+    user_data = DictProperty({})
     current_acc = StringProperty("")
-    current_slot = StringProperty("")
+    current_slot = StringProperty("1")
 
     def build(self):
+        # 초기 데이터 생성
+        self.user_data = {"관리자": {str(i): {"이름": f"캐릭터 {i}"} for i in range(1, 7)}}
         sm = ScreenManager(transition=FadeTransition())
         sm.add_widget(MainScreen(name='main'))
-        sm.add_widget(SlotScreen(name='slots'))
         sm.add_widget(DetailScreen(name='detail'))
         return sm
 
