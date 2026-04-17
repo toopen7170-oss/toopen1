@@ -8,10 +8,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
-    defaults:
-      run:
-        shell: bash
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -26,44 +22,30 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libsqlite3-dev python3-setuptools libffi-dev build-essential zip libltdl-dev
           pip install --upgrade pip
-          # [전수 검증] 빌드 엔진과의 호환성이 가장 높은 버전으로 고착
           pip install Cython==0.29.33 buildozer kivy kivymd pillow
 
       - name: Build with Buildozer
         run: |
-          # [철갑 로직 1] 환경 변수 강제 고착 (변수 뒤틀림 방어)
+          # [환경 강제 고착]
           export ANDROID_HOME="/usr/local/lib/android/sdk"
-          export ANDROID_SDK_ROOT="/usr/local/lib/android/sdk"
-          
-          # [철갑 로직 2] Buildozer 내부 경로 기만 및 그물망 생성
           SDK_PATH="/home/runner/.buildozer/android/platform/android-sdk"
-          mkdir -p "$SDK_PATH/tools/bin"
-          mkdir -p "$SDK_PATH/cmdline-tools/latest/bin"
-          mkdir -p "$SDK_PATH/platform-tools"
           mkdir -p "$SDK_PATH/licenses"
+          mkdir -p "$SDK_PATH/tools/bin"
           
-          # 3중 심볼릭 링크로 어떤 경로 탐색도 실제 SDK로 연결 (오류 0개 고착)
-          ln -s "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "$SDK_PATH/tools/bin/sdkmanager" || true
-          ln -s "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "$SDK_PATH/cmdline-tools/latest/bin/sdkmanager" || true
-          ln -s "$ANDROID_HOME/platform-tools/aidl" "$SDK_PATH/platform-tools/aidl" || true
-          
-          # [철갑 로직 3] 라이선스 물리적 강제 주입 (build-tools 37 거부 방어)
+          # [철갑 로직: 라이선스 및 aidl 강제 통과]
           cp -r $ANDROID_HOME/licenses/* "$SDK_PATH/licenses/" || true
           echo -e "\n8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb7437c3550b3118b226\n24333f8a63b6825ea9d5513f8e07f45a561f2210\n47bc30227b11c91942080a29497e7046ce36e6" > "$SDK_PATH/licenses/android-sdk-license"
           
-          # [철갑 로직 4] spec 파일 실시간 경로 강제 동기화
+          ln -s "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "$SDK_PATH/tools/bin/sdkmanager" || true
+          
+          # spec 파일 강제 동기화
           sed -i "s|^#\?android.sdk_path =.*|android.sdk_path = $ANDROID_HOME|" buildozer.spec
           sed -i "s|^#\?android.accept_sdk_license =.*|android.accept_sdk_license = True|" buildozer.spec
-
-          # 실행 경로 최우선 순위 부여
-          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
           
-          # 빌드 실행 (로그 레벨 2로 상세 출력 설정)
           buildozer -v android debug
 
-      - name: Upload APK on Success
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: RPG-Manager-APK
+          name: PT1-Manager-Final
           path: bin/*.apk
-          retention-days: 5
