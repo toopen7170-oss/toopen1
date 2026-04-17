@@ -23,16 +23,20 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libsqlite3-dev python3-setuptools libffi-dev build-essential zip libltdl-dev
           pip install --upgrade pip
-          # 필수 컴파일 도구 Cython 설치 포함
+          # 전수 검증: Cython 0.29.33 버전 고정으로 컴파일 안정성 확보
           pip install Cython==0.29.33 buildozer kivy kivymd pillow
 
       - name: Build with Buildozer
         run: |
-          # [환경 절연] 서버 NDK 간섭 차단
+          # [환경 절연] 서버 NDK(v27, v29 등) 간섭을 물리적으로 차단
           unset ANDROID_NDK
           unset ANDROID_NDK_HOME
           unset ANDROID_NDK_ROOT
           unset ANDROID_NDK_LATEST_HOME
+          
+          # [라이선스 무결성] Build-Tools 37 등 모든 SDK 라이선스에 자동 동의
+          mkdir -p ~/.android && touch ~/.android/repositories.cfg
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME --licenses || true
           
           # 빌드 실행
           buildozer android debug
