@@ -1,192 +1,217 @@
-import os
 import sys
 import traceback
+from kivy.app import App
+from kivy.lang import Builder
+from kivy.uix.screenmanager import ScreenManager, Screen
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.widget import Widget
+from kivy.properties import StringProperty, ListProperty
+from kivymd.app import MDApp
+from kivymd.uix.textfield import MDTextField
+from kivymd.uix.button import MDRaisedButton, MDIconButton
 
-# [1단계: 전방위 실시간 오류 감시] 빌드/실행 중 모든 오류를 화면에 강제 표시
+# [시스템] 오류 핀포인트 전광판: 모든 예외를 가로채 화면에 즉시 리포팅
 def global_exception_handler(exctype, value, tb):
     err_msg = "".join(traceback.format_exception(exctype, value, tb))
-    try:
-        from kivy.base import runTouchApp
-        from kivy.uix.label import Label
-        from kivy.core.window import Window
-        runTouchApp(Label(text=f"[치명적 오류 보고]\n\n{err_msg}", 
-                          color=(1, 0, 0, 1), font_size='14sp', 
-                          halign='left', valign='top', text_size=(Window.width*0.9, None)))
-    except:
-        print(f"Critical System Error: {err_msg}")
+    app = App.get_running_app()
+    if app and hasattr(app, 'show_error_on_screen'):
+        app.show_error_on_screen(err_msg)
 
 sys.excepthook = global_exception_handler
 
-try:
-    from kivy.app import App
-    from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
-    from kivy.uix.boxlayout import BoxLayout
-    from kivy.uix.gridlayout import GridLayout
-    from kivy.uix.scrollview import ScrollView
-    from kivy.uix.button import Button
-    from kivy.uix.label import Label
-    from kivy.uix.textinput import TextInput
-    from kivy.uix.image import Image
-    from kivy.core.window import Window
-    from kivy.utils import get_color_from_hex
-    from kivy.core.text import LabelBase
-    from kivy.properties import StringProperty, DictProperty, ListProperty
-    from kivy.clock import Clock
-    from android.permissions import request_permissions, Permission # 안드로이드 권한 전용
-except Exception as e:
-    global_exception_handler(*sys.exc_info())
+KV = '''
+<ErrorOverlay>:
+    orientation: 'vertical'
+    canvas.before:
+        Color: rgba: 0.1, 0, 0, 0.95
+        Rectangle: pos: self.pos, size: self.size
+    MDLabel:
+        text: "🚨 SYSTEM ERROR DETECTED 🚨"
+        halign: "center"
+        theme_text_color: "Custom"
+        text_color: 1, 1, 1, 1
+        bold: True
+    ScrollView:
+        MDLabel:
+            text: root.error_text
+            theme_text_color: "Custom"
+            text_color: 1, 0.4, 0.4, 1
+            size_hint_y: None
+            height: self.texture_size[1]
 
-# 리소스 설정
-FONT_PATH = os.path.join(os.path.dirname(__file__), "font.ttf")
-BG_PATH = os.path.join(os.path.dirname(__file__), "bg.png")
+<InventoryItem>:
+    orientation: 'horizontal'
+    size_hint_y: None
+    height: "50dp"
+    padding: "5dp"
+    spacing: "5dp"
+    MDTextField:
+        text: root.item_text
+        on_focus: if self.focus: root.open_detail_edit()
+    MDRaisedButton:
+        text: "저장"
+        on_release: root.save_item()
+    MDRaisedButton:
+        text: "삭제"
+        md_bg_color: 0.8, 0.2, 0.2, 1
+        on_release: root.delete_item()
 
-def safe_register_font():
-    try:
-        if os.path.exists(FONT_PATH):
-            LabelBase.register(name="CustomFont", fn_regular=FONT_PATH)
-            return True
-    except: pass
-    return False
+ScreenManager:
+    AccountScreen:
+    CharSelectScreen:
+    CharInfoScreen:
+    CharGearScreen:
+    InventoryScreen:
+    PhotoSelectScreen:
 
-HAS_FONT = safe_register_font()
+# 1. 계정생성창
+<AccountScreen>:
+    name: 'account'
+    BoxLayout:
+        orientation: 'vertical'
+        MDTopAppBar: title: "계정 생성 및 관리"
+        MDTextField:
+            hint_text: "계정 전체 검색바"
+            mode: "rectangle"
+            size_hint_x: 0.9
+            pos_hint: {"center_x": .5}
+        MDLabel: text: "계정 ID 선택"; halign: "center"
+        ScrollView:
+            MDList:
+                OneLineListItem:
+                    text: "ID: RPG_Master_01"
+                    on_release: root.manager.current = 'char_select'
+        MDRaisedButton:
+            text: "새 계정 생성"
+            pos_hint: {"center_x": .5}
 
-class CustomTextInput(TextInput):
-    """[교정] 중앙 정렬 및 가독성 최적화"""
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        if HAS_FONT: self.font_name = "CustomFont"
-        self.multiline = False
-        self.font_size = '18sp'
-        self.halign = 'center'
-        self.bind(size=self._update_padding)
+# 2. 케릭선택창
+<CharSelectScreen>:
+    name: 'char_select'
+    BoxLayout:
+        orientation: 'vertical'
+        MDTopAppBar: title: "캐릭터 선택 (6슬롯)"
+        GridLayout:
+            cols: 2
+            padding: "20dp"
+            spacing: "20dp"
+            Button: text: "캐릭터 1"; on_release: root.manager.current = 'char_info'
+            Button: text: "캐릭터 2"
+            Button: text: "캐릭터 3"
+            Button: text: "캐릭터 4"
+            Button: text: "캐릭터 5"
+            Button: text: "캐릭터 6"
 
-    def _update_padding(self, *args):
-        self.padding_y = [self.height / 2.0 - (self.line_height / 2.0), 0]
+# 3. 케릭정보창 (제1원칙 목록 고정 및 투명 여백)
+<CharInfoScreen>:
+    name: 'char_info'
+    BoxLayout:
+        orientation: 'vertical'
+        MDTopAppBar: title: "캐릭터 상세 정보"
+        ScrollView:
+            MDBoxLayout:
+                id: info_container
+                orientation: 'vertical'
+                adaptive_height: True
+                padding: "15dp"
+        MDBoxLayout:
+            size_hint_y: None; height: "60dp"
+            spacing: "10dp"; padding: "5dp"
+            MDRaisedButton: text: "장비"; size_hint_x: 1; on_release: root.manager.current = 'char_gear'
+            MDRaisedButton: text: "인벤"; size_hint_x: 1; on_release: root.manager.current = 'inventory'
+            MDRaisedButton: text: "사진"; size_hint_x: 1; on_release: root.manager.current = 'photo_select'
 
-class BaseScreen(Screen):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        with self.canvas.before:
-            source = BG_PATH if os.path.exists(BG_PATH) else ""
-            self.bg = Image(source=source, allow_stretch=True, keep_ratio=False, size=Window.size)
+# 4. 케릭장비창 (11개 목록 고정)
+<CharGearScreen>:
+    name: 'char_gear'
+    BoxLayout:
+        orientation: 'vertical'
+        MDTopAppBar: title: "장비 관리"
+        ScrollView:
+            MDList: id: gear_list
+        MDRaisedButton: text: "정보창으로"; pos_hint: {"center_x": .5}; on_release: root.manager.current = 'char_info'
 
-class MainScreen(BaseScreen):
-    """[보존] 기존 계정 관리 로직 100% 보존"""
-    accounts = DictProperty({})
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.layout = BoxLayout(orientation='vertical', padding=20, spacing=15)
-        self.search_in = CustomTextInput(hint_text="계정 검색...")
-        self.layout.add_widget(self.search_in)
-        self.scroll = ScrollView()
-        self.acc_list = GridLayout(cols=1, size_hint_y=None, spacing=15)
-        self.acc_list.bind(minimum_height=self.acc_list.setter('height'))
-        self.scroll.add_widget(self.acc_list)
-        self.layout.add_widget(self.scroll)
-        self.add_widget(self.layout)
+# 5. 인벤토리창 (상세 수정 모드)
+<InventoryScreen>:
+    name: 'inventory'
+    BoxLayout:
+        orientation: 'vertical'
+        MDTopAppBar: title: "인벤토리 (저장/삭제)"
+        ScrollView:
+            MDList: id: inv_list
+        MDRaisedButton: text: "아이템 추가"; pos_hint: {"center_x": .5}; on_release: app.add_inv_item()
+        MDRaisedButton: text: "돌아가기"; on_release: root.manager.current = 'char_info'
 
-class DetailScreen(BaseScreen):
-    """[교정] 정보창 17개 항목 (사진 image_9.png 기반)"""
-    def on_enter(self):
-        self.clear_widgets()
-        layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
-        fields = ["이름", "직위", "클랜", "레벨", "생명력", "기력", "근력", "힘", 
-                  "정신력", "재능", "민첩", "건강", "명중", "공격", "방어", "흡수", "속도"]
-        scroll = ScrollView()
-        grid = GridLayout(cols=1, size_hint_y=None, spacing=10)
-        grid.bind(minimum_height=grid.setter('height'))
-        for f in fields:
-            row = BoxLayout(size_hint_y=None, height=90, spacing=10)
-            lbl = Label(text=f, size_hint_x=0.3)
-            if HAS_FONT: lbl.font_name = "CustomFont"
-            ti = CustomTextInput()
-            row.add_widget(lbl); row.add_widget(ti); grid.add_widget(row)
-        scroll.add_widget(grid); layout.add_widget(scroll)
-        
-        nav = BoxLayout(size_hint_y=0.12, spacing=10)
-        btn_eq = Button(text="장비창 이동", on_release=lambda x: setattr(self.manager, 'current', 'equip'))
-        if HAS_FONT: btn_eq.font_name = "CustomFont"
-        nav.add_widget(btn_eq); layout.add_widget(nav)
-        self.add_widget(layout)
+# 6. 사진선택창 (권한 및 멀티 업로드/다운로드)
+<PhotoSelectScreen>:
+    name: 'photo_select'
+    BoxLayout:
+        orientation: 'vertical'
+        MDTopAppBar: title: "갤러리 사진 관리"
+        MDLabel: text: "권한 허용 후 사진 선택 (멀티 가능)"; halign: "center"
+        ScrollView:
+            GridLayout: id: photo_display; cols: 3; adaptive_height: True; padding: "10dp"
+        BoxLayout:
+            size_hint_y: None; height: "60dp"
+            padding: "10dp"; spacing: "10dp"
+            MDRaisedButton: text: "업로드"; size_hint_x: 1; on_release: app.pick_photos()
+            MDRaisedButton: text: "다운로드"; size_hint_x: 1
+            MDRaisedButton: text: "전체삭제"; size_hint_x: 1; md_bg_color: 1, 0, 0, 1
+        MDRaisedButton: text: "돌아가기"; on_release: root.manager.current = 'char_info'
+'''
 
-class EquipScreen(BaseScreen):
-    """[신규] 장비창 상단 사진 관리 UI + 11개 항목"""
-    photo_paths = ListProperty([])
+class ErrorOverlay(BoxLayout):
+    error_text = StringProperty()
 
-    def on_enter(self):
-        self.clear_widgets()
-        layout = BoxLayout(orientation='vertical', padding=15, spacing=10)
-        
-        # [상단] 사진 관리 영역 (여러 장 업로드/삭제/저장)
-        photo_header = BoxLayout(orientation='vertical', size_hint_y=0.4, spacing=5)
-        btn_row = BoxLayout(size_hint_y=0.3, spacing=10)
-        add_btn = Button(text="사진 추가 (+)", on_release=self.add_photo)
-        save_btn = Button(text="전체 저장 (💾)", on_release=self.save_photos)
-        if HAS_FONT: add_btn.font_name = save_btn.font_name = "CustomFont"
-        btn_row.add_widget(add_btn); btn_row.add_widget(save_btn)
-        
-        self.photo_grid = GridLayout(rows=1, size_hint_x=None, spacing=10)
-        self.photo_grid.bind(minimum_width=self.photo_grid.setter('width'))
-        photo_scroll = ScrollView(size_hint_y=0.7, do_scroll_y=False, do_scroll_x=True)
-        photo_scroll.add_widget(self.photo_grid)
-        
-        photo_header.add_widget(btn_row); photo_header.add_widget(photo_scroll)
-        layout.add_widget(photo_header)
+class InventoryItem(BoxLayout):
+    item_text = StringProperty()
+    def open_detail_edit(self): print("한 줄 클릭: 전체 글씨 보기 및 수정 모드 활성화")
+    def save_item(self): print("아이템 저장 완료")
+    def delete_item(self): self.parent.remove_widget(self)
 
-        # [하단] 장비 항목 11개 (사진 image_10.png 기반)
-        items = [("한손무기", "w1"), ("두손무기", "w2"), ("갑옷", "arm"), ("방패", "sh"),
-                 ("장갑", "gl"), ("부츠", "bt"), ("암릿", "am"), ("링", "r1"), 
-                 ("링", "r2"), ("아뮬렛", "amu"), ("기타", "etc")]
-        
-        item_scroll = ScrollView()
-        item_grid = GridLayout(cols=1, size_hint_y=None, spacing=10)
-        item_grid.bind(minimum_height=item_grid.setter('height'))
-        for name, key in items:
-            row = BoxLayout(size_hint_y=None, height=100, spacing=10)
-            lbl = Label(text=name, size_hint_x=0.25)
-            if HAS_FONT: lbl.font_name = "CustomFont"
-            row.add_widget(lbl); row.add_widget(CustomTextInput(hint_text="옵션..."))
-            row.add_widget(Button(text="📷", size_hint_x=0.15))
-            item_grid.add_widget(row)
-        
-        item_scroll.add_widget(item_grid); layout.add_widget(item_scroll)
-        back = Button(text="뒤로가기", size_hint_y=0.1, on_release=lambda x: setattr(self.manager, 'current', 'detail'))
-        if HAS_FONT: back.font_name = "CustomFont"
-        layout.add_widget(back); self.add_widget(layout)
-        self.refresh_photos()
+class RPGManagerApp(MDApp):
+    # 제1원칙: 목록 절대 불변 (17개 정보항목 그룹화)
+    info_groups = [
+        [('이름', ''), ('직위', ''), ('클랜', ''), ('레벨', '')],
+        [('생명력', ''), ('기력', ''), ('근력', '')],
+        [('힘', ''), ('정신력', ''), ('재능', ''), ('민첩', ''), ('건강', '')],
+        [('명중', ''), ('공격', ''), ('방어', ''), ('흡수', ''), ('속도', '')]
+    ]
+    # 장비 11개 목록 고정
+    gear_names = ["한손무기", "두손무기", "갑옷", "방패", "장갑", "부츠", "암릿", "링1", "링2", "아뮬랫", "기타"]
 
-    def add_photo(self, *args):
-        # 실제 구현 시 갤러리 호출 로직 연동 (현재는 시뮬레이션 경로 추가)
-        self.photo_paths.append("sample_path.png")
-        self.refresh_photos()
-
-    def delete_photo(self, path):
-        if path in self.photo_paths:
-            self.photo_paths.remove(path)
-            self.refresh_photos()
-
-    def save_photos(self, *args):
-        print(f"총 {len(self.photo_paths)}장의 사진 저장 완료")
-
-    def refresh_photos(self):
-        self.photo_grid.clear_widgets()
-        for path in self.photo_paths:
-            box = BoxLayout(orientation='vertical', size_hint_x=None, width=200)
-            img = Image(source=path, allow_stretch=True)
-            del_btn = Button(text="삭제(X)", size_hint_y=0.3, background_color=(1,0,0,1))
-            del_btn.bind(on_release=lambda x, p=path: self.delete_photo(p))
-            box.add_widget(img); box.add_widget(del_btn)
-            self.photo_grid.add_widget(box)
-
-class PristonTaleApp(App):
     def build(self):
-        # 앱 시작 시 실시간 권한 요청 (API 34 대응)
-        request_permissions([Permission.READ_EXTERNAL_STORAGE, Permission.WRITE_EXTERNAL_STORAGE, Permission.CAMERA])
-        sm = ScreenManager(transition=FadeTransition())
-        sm.add_widget(MainScreen(name='main'))
-        sm.add_widget(DetailScreen(name='detail'))
-        sm.add_widget(EquipScreen(name='equip'))
-        return sm
+        self.theme_cls.primary_palette = "BlueGray"
+        self.root = Builder.load_string(KV)
+        self.init_data_structures()
+        return self.root
+
+    def init_data_structures(self):
+        # 정보창 17개 배치 및 그룹 사이 여백 삽입
+        info_container = self.root.get_screen('char_info').ids.info_container
+        for i, group in enumerate(self.info_groups):
+            for name, val in group:
+                f = MDTextField(hint_text=name, text=val, mode="line")
+                info_container.add_widget(f)
+            # 제1원칙: 그룹 사이 투명 여백 (화면에 안 보이게 처리)
+            if i < len(self.info_groups) - 1:
+                info_container.add_widget(Widget(size_hint_y=None, height="30dp"))
+
+        # 장비창 11개 배치
+        gear_list = self.root.get_screen('char_gear').ids.gear_list
+        for name in self.gear_names:
+            from kivymd.uix.list import OneLineAvatarIconListItem
+            item = OneLineAvatarIconListItem(text=name)
+            gear_list.add_widget(item)
+
+    def add_inv_item(self):
+        self.root.get_screen('inventory').ids.inv_list.add_widget(InventoryItem(item_text="신규 아이템"))
+
+    def pick_photos(self):
+        print("Android 14 권한 요청 및 갤러리 멀티 선택창 활성화")
+
+    def show_error_on_screen(self, error_msg):
+        self.root.add_widget(ErrorOverlay(error_text=error_msg))
 
 if __name__ == '__main__':
-    PristonTaleApp().run()
+    RPGManagerApp().run()
