@@ -26,28 +26,32 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libsqlite3-dev python3-setuptools libffi-dev build-essential zip libltdl-dev
           pip install --upgrade pip
-          # 전수 검사 결과: NDK r26b 환경에 최적화된 Cython 버전 고정
           pip install Cython==0.29.33 buildozer kivy kivymd pillow
 
       - name: Build with Buildozer
         run: |
-          # [환경 절연]
+          # 1. 환경 절연
           unset ANDROID_NDK
           unset ANDROID_NDK_HOME
           unset ANDROID_NDK_ROOT
-          unset ANDROID_NDK_LATEST_HOME
           
-          # [핵심 교정] buildozer.spec의 경로 설정을 서버 표준 환경($ANDROID_HOME)으로 강제 덮어쓰기
-          # 이 작업으로 "tools/bin/sdkmanager" 미존재 오류를 원천 차단합니다.
-          sed -i "s|^#\?android.sdk_path =.*|android.sdk_path = $ANDROID_HOME|" buildozer.spec
-          sed -i "s|^#\?android.ndk_path =.*|android.ndk_path = $ANDROID_HOME/ndk-bundle|" buildozer.spec
+          # 2. [핵심 조치] Buildozer가 원하는 구형 경로를 물리적으로 생성하여 연결
+          # Buildozer의 내부 작업 경로를 미리 만들고 최신 SDK를 매핑합니다.
+          SDK_DIR="/home/runner/.buildozer/android/platform/android-sdk"
+          mkdir -p "$SDK_DIR/tools/bin"
+          
+          # 시스템에 설치된 최신 sdkmanager를 구형 경로로 링크 (Buildozer 기만 로직)
+          ln -s "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "$SDK_DIR/tools/bin/sdkmanager" || true
+          ln -s "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" "$SDK_DIR/tools/bin/avdmanager" || true
+
+          # 3. buildozer.spec 강제 교정
+          sed -i "s|^#\?android.sdk_path =.*|android.sdk_path = $SDK_DIR|" buildozer.spec
           sed -i "s|^#\?android.accept_sdk_license =.*|android.accept_sdk_license = True|" buildozer.spec
 
-          # [라이선스 물리 주입]
-          mkdir -p ~/.buildozer/android/platform/android-sdk/licenses
-          echo -e "\n8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb7437c3550b3118b226\n24333f8a63b6825ea9d5513f8e07f45a561f2210" > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
+          # 4. 라이선스 주입 및 경로 확보
+          mkdir -p "$SDK_DIR/licenses"
+          echo -e "\n8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb7437c3550b3118b226\n24333f8a63b6825ea9d5513f8e07f45a561f2210" > "$SDK_DIR/licenses/android-sdk-license"
           
-          # 보조 경로 확보 및 라이선스 확인
           export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
           yes | sdkmanager --licenses || true
           
