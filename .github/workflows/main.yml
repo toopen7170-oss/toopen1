@@ -28,13 +28,13 @@ jobs:
       - name: Build with Buildozer
         id: buildozer
         run: |
-          # [제1원칙 사수] 서버에 설정된 v27 NDK 관련 모든 변수를 강제 초기화합니다.
+          # [제1원칙 사수] 서버에 강제 설정된 v27 NDK 관련 모든 환경 변수를 삭제하여 간섭을 차단합니다.
           unset ANDROID_NDK
           unset ANDROID_NDK_HOME
           unset ANDROID_NDK_ROOT
           unset ANDROID_NDK_LATEST_HOME
           
-          # 빌드 시작 및 로그를 build_log.txt에 실시간 기록
+          # 빌드를 시작하고 실시간 로그를 build_log.txt에 기록합니다.
           buildozer android debug 2>&1 | tee build_log.txt
         continue-on-error: true
 
