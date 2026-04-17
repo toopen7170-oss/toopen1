@@ -22,26 +22,29 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libsqlite3-dev python3-setuptools libffi-dev build-essential zip libltdl-dev
           pip install --upgrade pip
-          pip install Cython==0.29.33 buildozer kivy kivymd pillow
+          pip install Cython==0.29.33 buildozer kivy kivymd pillow requests
 
       - name: Build with Buildozer
         run: |
-          # [환경 강제 고착]
+          # [철갑 경로 고착 로직]
           export ANDROID_HOME="/usr/local/lib/android/sdk"
-          SDK_PATH="/home/runner/.buildozer/android/platform/android-sdk"
-          mkdir -p "$SDK_PATH/licenses"
-          mkdir -p "$SDK_PATH/tools/bin"
+          export ANDROID_SDK_ROOT="/usr/local/lib/android/sdk"
           
-          # [철갑 로직: 라이선스 및 aidl 강제 통과]
-          cp -r $ANDROID_HOME/licenses/* "$SDK_PATH/licenses/" || true
-          echo -e "\n8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb7437c3550b3118b226\n24333f8a63b6825ea9d5513f8e07f45a561f2210\n47bc30227b11c91942080a29497e7046ce36e6" > "$SDK_PATH/licenses/android-sdk-license"
+          # Buildozer가 생성할 예정인 경로를 미리 선점하여 실제 SDK와 연결
+          SDK_TARGET="/home/runner/.buildozer/android/platform/android-sdk"
+          mkdir -p "$SDK_TARGET/licenses"
+          mkdir -p "$SDK_TARGET/tools/bin"
+          mkdir -p "$SDK_TARGET/cmdline-tools/latest/bin"
           
-          # aidl 및 sdkmanager 경로 강제 연결
-          ln -s "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "$SDK_PATH/tools/bin/sdkmanager" || true
-          mkdir -p "$SDK_PATH/build-tools/34.0.0"
-          ln -s "$ANDROID_HOME/build-tools/34.0.0/aidl" "$SDK_PATH/build-tools/34.0.0/aidl" || true
+          # 라이선스 및 바이너리 강제 이식 (오류 0개 고착)
+          cp -r $ANDROID_HOME/licenses/* "$SDK_TARGET/licenses/" || true
+          echo -e "\n8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb7437c3550b3118b226" > "$SDK_TARGET/licenses/android-sdk-license"
           
-          # spec 파일 강제 동기화
+          ln -s "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "$SDK_TARGET/tools/bin/sdkmanager" || true
+          ln -s "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "$SDK_TARGET/cmdline-tools/latest/bin/sdkmanager" || true
+          ln -s "$ANDROID_HOME/platform-tools/aidl" "$SDK_TARGET/platform-tools/aidl" || true
+
+          # spec 파일 실시간 경로 수정
           sed -i "s|^#\?android.sdk_path =.*|android.sdk_path = $ANDROID_HOME|" buildozer.spec
           sed -i "s|^#\?android.accept_sdk_license =.*|android.accept_sdk_license = True|" buildozer.spec
           
