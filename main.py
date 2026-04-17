@@ -120,10 +120,10 @@ class DetailScreen(BaseScreen):
         self.clear_widgets()
         layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
         scroll = ScrollView()
-        grid = GridLayout(cols=1, size_hint_y=None, spacing=12) # [수정] 칸 간격 확대
+        grid = GridLayout(cols=1, size_hint_y=None, spacing=12)
         grid.bind(minimum_height=grid.setter('height'))
         
-        # 사진 image_9.png 기반 17개 항목 (삭제/추가 없이 일치)
+        # 사진 image_9.png 기반 17개 항목 (순서 및 명칭 일치)
         fields = ["이름", "직위", "클랜", "레벨", "생명력", "기력", "근력", "힘", 
                   "정신력", "재능", "민첩", "건강", "명중", "공격", "방어", "흡수", "속도"]
         
@@ -138,12 +138,13 @@ class DetailScreen(BaseScreen):
             
         scroll.add_widget(grid); layout.add_widget(scroll)
         
-        # 하단 메뉴 및 자동 저장 로직 (73927.jpg 반영)
+        # 하단 메뉴 (73927.jpg 반영)
         nav = BoxLayout(size_hint_y=0.15, spacing=10)
         for t in ["장비", "인벤", "저장"]:
             btn = Button(text=t, background_color=get_color_from_hex('#1a3a5a'))
             if HAS_FONT: btn.font_name = "CustomFont"
             if t == "저장": btn.bind(on_release=self.save_all)
+            elif t == "장비": btn.bind(on_release=lambda x: setattr(self.manager, 'current', 'equip'))
             nav.add_widget(btn)
         
         layout.add_widget(nav)
@@ -151,8 +152,7 @@ class DetailScreen(BaseScreen):
 
     def save_all(self, *args):
         try:
-            # 저장 로직 수행 (논리 진단 포함)
-            print("데이터 저장 완료")
+            print(f"{self.current_acc} 데이터 저장 완료")
         except Exception as e:
             LogicMonitor.report("데이터 저장", e)
 
@@ -165,8 +165,7 @@ class EquipScreen(BaseScreen):
         grid = GridLayout(cols=1, size_hint_y=None, spacing=15)
         grid.bind(minimum_height=grid.setter('height'))
         
-        # 사진 image_10.png 기반 11개 항목
-        # 고유 ID 부여로 중복된 '링' 항목 간섭 방지
+        # 사진 image_10.png 기반 11개 항목 및 고유 식별자
         items = [
             ("한손무기", "w1"), ("두손무기", "w2"), ("갑옷", "arm"), ("방패", "sh"),
             ("장갑", "gl"), ("부츠", "bt"), ("암릿", "am"), ("링", "r1"),
