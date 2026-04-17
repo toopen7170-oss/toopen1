@@ -1,230 +1,254 @@
 import sys
 import traceback
-from kivy.app import App
 from kivy.lang import Builder
-from kivy.uix.screenmanager import ScreenManager, Screen
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.widget import Widget
-from kivy.properties import StringProperty, ListProperty
+from kivy.clock import Clock
 from kivymd.app import MDApp
+from kivymd.uix.screen import MDScreen
+from kivymd.uix.screenmanager import MDScreenManager
+from kivymd.uix.button import MDRaisedButton, MDFlatButton
+from kivymd.uix.dialog import MDDialog
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.list import OneLineListItem
+from kivy.properties import StringProperty, ListProperty
+from kivy.utils import platform
 
-# [시스템] 오류 핀포인트 전광판
+# [전수 검사 보강] 실시간 에러 전광판 로직
+# 앱 실행 중 오류 발생 시 꺼지지 않고 화면에 에러를 표시합니다.
 def global_exception_handler(exctype, value, tb):
     err_msg = "".join(traceback.format_exception(exctype, value, tb))
-    app = App.get_running_app()
-    if app and hasattr(app, 'show_error_on_screen'):
-        app.show_error_on_screen(err_msg)
+    print(err_msg)
+    try:
+        app = MDApp.get_running_app()
+        if app and app.root:
+            app.show_error_popup(err_msg)
+    except:
+        pass
 
 sys.excepthook = global_exception_handler
 
 KV = '''
-<ErrorOverlay>:
-    orientation: 'vertical'
-    canvas.before:
-        Color: rgba: 0.1, 0, 0, 0.95
-        Rectangle: pos: self.pos, size: self.size
-    MDLabel:
-        text: "🚨 시스템 오류 보고 (무결점 전수검사 모드) 🚨"
-        halign: "center"
-        theme_text_color: "Custom"
-        text_color: 1, 1, 1, 1
-        bold: True
+<ErrorDialogContent>:
+    orientation: "vertical"
+    spacing: "12dp"
+    size_hint_y: None
+    height: "300dp"
     ScrollView:
         MDLabel:
             text: root.error_text
-            theme_text_color: "Custom"
-            text_color: 1, 0.4, 0.4, 1
             size_hint_y: None
             height: self.texture_size[1]
-
-<InventoryItem>:
-    orientation: 'horizontal'
-    size_hint_y: None
-    height: "50dp"
-    padding: "5dp"
-    MDTextField:
-        id: item_input
-        text: root.item_text
-        on_focus: if self.focus: root.open_detail_edit()
-    MDRaisedButton:
-        text: "저장"
-        on_release: root.save_item()
-    MDRaisedButton:
-        text: "삭제"
-        md_bg_color: 0.8, 0.2, 0.2, 1
-        on_release: root.delete_item()
+            theme_text_color: "Error"
+            font_style: "Caption"
 
 ScreenManager:
-    AccountScreen:
+    MainScreen:
     CharSelectScreen:
     CharInfoScreen:
-    CharGearScreen:
+    EquipmentScreen:
     InventoryScreen:
-    PhotoSelectScreen:
+    PhotoScreen:
 
-# 1. 계정생성창 (전체 검색바 포함)
-<AccountScreen>:
-    name: 'account'
-    BoxLayout:
-        orientation: 'vertical'
-        MDTopAppBar: title: "계정 생성 및 전체 검색"
+<MainScreen>:
+    name: "main"
+    MDBoxLayout:
+        orientation: "vertical"
+        MDTopAppBar:
+            title: "RPG 계정 관리자"
+            elevation: 4
         MDBoxLayout:
-            orientation: 'vertical'
+            orientation: "vertical"
             padding: "10dp"
             spacing: "10dp"
-            adaptive_height: True
+            # [검색 시스템] 실시간 ID 검색바
             MDTextField:
-                id: search_bar
-                hint_text: "어느 계정에 있는지 바로 찾기 (검색)"
-                mode: "rectangle"
-                on_text: app.filter_accounts(self.text)
+                id: search_field
+                hint_text: "계정 ID 검색"
+                on_text: root.filter_accounts(self.text)
+            ScrollView:
+                MDList:
+                    id: account_list
             MDRaisedButton:
                 text: "새 계정 생성"
                 pos_hint: {"center_x": .5}
-        ScrollView:
-            MDList:
-                id: account_list
+                on_release: root.create_account()
 
-# 2. 케릭선택창 (6개 슬롯 구조)
 <CharSelectScreen>:
-    name: 'char_select'
-    BoxLayout:
-        orientation: 'vertical'
-        MDTopAppBar: title: "캐릭터 선택 (6개 선택창)"
-        GridLayout:
+    name: "char_select"
+    MDBoxLayout:
+        orientation: "vertical"
+        MDTopAppBar:
+            title: "캐릭터 선택 (6슬롯)"
+            left_action_items: [["arrow-left", lambda x: root.go_back()]]
+        MDGridLayout:
             cols: 2
             padding: "20dp"
             spacing: "20dp"
-            Button: text: "슬롯 1"; on_release: root.manager.current = 'char_info'
-            Button: text: "슬롯 2"
-            Button: text: "슬롯 3"
-            Button: text: "슬롯 4"
-            Button: text: "슬롯 5"
-            Button: text: "슬롯 6"
+            id: char_slots
 
-# 3. 케릭정보창 (제1원칙: 17개 목록 및 투명 여백)
 <CharInfoScreen>:
-    name: 'char_info'
-    BoxLayout:
-        orientation: 'vertical'
-        MDTopAppBar: title: "캐릭터 상세 정보"
+    name: "char_info"
+    MDBoxLayout:
+        orientation: "vertical"
+        MDTopAppBar:
+            title: "캐릭터 정보 (17종)"
+            left_action_items: [["arrow-left", lambda x: root.go_back()]]
         ScrollView:
             MDBoxLayout:
+                orientation: "vertical"
+                padding: "10dp"
+                spacing: "5dp"
                 id: info_container
-                orientation: 'vertical'
-                adaptive_height: True
-                padding: "15dp"
-        MDBoxLayout:
-            size_hint_y: None; height: "60dp"
-            spacing: "10dp"; padding: "5dp"
-            MDRaisedButton: text: "장비"; size_hint_x: 1; on_release: root.manager.current = 'char_gear'
-            MDRaisedButton: text: "인벤"; size_hint_x: 1; on_release: root.manager.current = 'inventory'
-            MDRaisedButton: text: "사진"; size_hint_x: 1; on_release: root.manager.current = 'photo_select'
 
-# 4. 케릭장비창 (11개 목록 보존)
-<CharGearScreen>:
-    name: 'char_gear'
-    BoxLayout:
-        orientation: 'vertical'
-        MDTopAppBar: title: "장비 목록"
+<EquipmentScreen>:
+    name: "equipment"
+    MDBoxLayout:
+        orientation: "vertical"
+        MDTopAppBar:
+            title: "장비 정보 (11종)"
+            left_action_items: [["arrow-left", lambda x: root.go_back()]]
         ScrollView:
-            MDList: id: gear_list
-        MDRaisedButton: text: "돌아가기"; pos_hint: {"center_x": .5}; on_release: root.manager.current = 'char_info'
+            MDBoxLayout:
+                orientation: "vertical"
+                padding: "10dp"
+                spacing: "5dp"
+                id: equip_container
 
-# 5. 인벤토리창 (한줄씩 저장/삭제/수정)
 <InventoryScreen>:
-    name: 'inventory'
-    BoxLayout:
-        orientation: 'vertical'
-        MDTopAppBar: title: "인벤토리"
+    name: "inventory"
+    MDBoxLayout:
+        orientation: "vertical"
+        MDTopAppBar:
+            title: "인벤토리"
+            left_action_items: [["arrow-left", lambda x: root.go_back()]]
+        MDBoxLayout:
+            padding: "10dp"
+            spacing: "10dp"
+            size_hint_y: None
+            height: "60dp"
+            MDTextField:
+                id: item_input
+                hint_text: "아이템 추가"
+            MDIconButton:
+                icon: "plus"
+                on_release: root.add_item()
         ScrollView:
-            MDList: id: inv_list
-        MDRaisedButton: text: "아이템 추가"; pos_hint: {"center_x": .5}; on_release: app.add_inv_item()
-        MDRaisedButton: text: "돌아가기"; on_release: root.manager.current = 'char_info'
-
-# 6. 사진선택창 (멀티 업로드/다운로드 및 권한)
-<PhotoSelectScreen>:
-    name: 'photo_select'
-    BoxLayout:
-        orientation: 'vertical'
-        MDTopAppBar: title: "사진 선택 및 관리"
-        MDLabel: text: "사진 멀티 선택 및 업로드/다운로드"; halign: "center"
-        ScrollView:
-            GridLayout: id: photo_display; cols: 3; adaptive_height: True; padding: "10dp"
-        BoxLayout:
-            size_hint_y: None; height: "60dp"
-            padding: "10dp"; spacing: "10dp"
-            MDRaisedButton: text: "사진 불러오기"; size_hint_x: 1; on_release: app.pick_photos()
-            MDRaisedButton: text: "전체 저장"; size_hint_x: 1
-            MDRaisedButton: text: "삭제"; size_hint_x: 1; md_bg_color: 1, 0, 0, 1
-        MDRaisedButton: text: "돌아가기"; on_release: root.manager.current = 'char_info'
+            MDList:
+                id: inv_list
 '''
 
-class ErrorOverlay(BoxLayout):
-    error_text = StringProperty()
+class ErrorDialogContent(MDScreen):
+    error_text = StringProperty("")
 
-class InventoryItem(BoxLayout):
-    item_text = StringProperty()
-    def open_detail_edit(self): print("한 줄 클릭: 전체 수정 모드 활성화")
-    def save_item(self): print("아이템 저장 완료")
-    def delete_item(self): self.parent.remove_widget(self)
+class MainScreen(MDScreen):
+    def filter_accounts(self, text):
+        # 검색 로직: ID 포함 여부 확인
+        self.ids.account_list.clear_widgets()
+        accounts = ["Admin_01", "Player_Toopen", "Guest_User"] # 샘플 데이터
+        for acc in accounts:
+            if text.lower() in acc.lower():
+                self.ids.account_list.add_widget(
+                    OneLineListItem(text=acc, on_release=lambda x, a=acc: self.select_account(a))
+                )
 
-class RPGManagerApp(MDApp):
-    # 제1원칙: 기본 토대 목록 (절대 불변)
-    all_accounts = ["Admin_User", "Toopen_Master", "Rpg_Player_01", "Storage_Acc"]
-    info_groups = [
-        [('이름', ''), ('직위', ''), ('클랜', ''), ('레벨', '')],
-        [('생명력', ''), ('기력', ''), ('근력', '')],
-        [('힘', ''), ('정신력', ''), ('재능', ''), ('민첩', ''), ('건강', '')],
-        [('명중', ''), ('공격', ''), ('방어', ''), ('흡수', ''), ('속도', '')]
+    def select_account(self, acc_id):
+        self.manager.current = "char_select"
+
+    def create_account(self):
+        pass
+
+class CharSelectScreen(MDScreen):
+    def on_enter(self):
+        self.ids.char_slots.clear_widgets()
+        for i in range(1, 7):
+            self.ids.char_slots.add_widget(
+                MDRaisedButton(text=f"Slot {i}\\n캐릭터 정보", on_release=lambda x: self.go_info())
+            )
+    
+    def go_info(self):
+        self.manager.current = "char_info"
+    
+    def go_back(self):
+        self.manager.current = "main"
+
+class CharInfoScreen(MDScreen):
+    # [제1원칙] 17개 정보 항목 보존
+    info_list = [
+        "이름", "직위", "클랜", "레벨", "생명력", "기력", "근력", 
+        "힘", "정신력", "재능", "민첩", "건강", "명중", "공격", "방어", "흡수", "속도"
     ]
-    gear_names = ["한손무기", "두손무기", "갑옷", "방패", "장갑", "부츠", "암릿", "링1", "링2", "아뮬랫", "기타"]
+    def on_enter(self):
+        self.ids.info_container.clear_widgets()
+        for item in self.info_list:
+            self.ids.info_container.add_widget(MDTextField(hint_text=item))
+        self.ids.info_container.add_widget(MDRaisedButton(text="장비 관리", on_release=lambda x: self.go_equip()))
 
+    def go_equip(self):
+        self.manager.current = "equipment"
+
+    def go_back(self):
+        self.manager.current = "char_select"
+
+class EquipmentScreen(MDScreen):
+    # [제1원칙] 11개 장비 항목 보존
+    equip_list = [
+        "한손무기", "두손무기", "갑옷", "방패", "장갑", "부츠", "암릿", "링1", "링2", "아뮬랫", "기타"
+    ]
+    def on_enter(self):
+        self.ids.equip_container.clear_widgets()
+        for item in self.equip_list:
+            self.ids.equip_container.add_widget(MDTextField(hint_text=item))
+        self.ids.equip_container.add_widget(MDRaisedButton(text="인벤토리 관리", on_release=lambda x: self.go_inv()))
+
+    def go_inv(self):
+        self.manager.current = "inventory"
+
+    def go_back(self):
+        self.manager.current = "char_info"
+
+class InventoryScreen(MDScreen):
+    def add_item(self):
+        text = self.ids.item_input.text
+        if text:
+            item = OneLineListItem(text=text)
+            item.bind(on_release=lambda x: self.show_item_detail(x))
+            self.ids.inv_list.add_widget(item)
+            self.ids.item_input.text = ""
+
+    def show_item_detail(self, item_widget):
+        # 인벤토리 상세 수정 및 삭제 로직
+        self.dialog = MDDialog(
+            title="아이템 관리",
+            text=f"선택된 아이템: {item_widget.text}",
+            buttons=[
+                MDFlatButton(text="삭제", on_release=lambda x: self.delete_item(item_widget)),
+                MDFlatButton(text="닫기", on_release=lambda x: self.dialog.dismiss())
+            ]
+        )
+        self.dialog.open()
+
+    def delete_item(self, item):
+        self.ids.inv_list.remove_widget(item)
+        self.dialog.dismiss()
+
+    def go_back(self):
+        self.manager.current = "equipment"
+
+class RPGApp(MDApp):
     def build(self):
-        self.theme_cls.primary_palette = "Teal"
-        self.root = Builder.load_string(KV)
-        self.init_data_setup()
-        return self.root
+        self.theme_cls.primary_palette = "BlueGray"
+        Builder.load_string(KV)
+        return MDScreenManager()
 
-    def init_data_setup(self):
-        # 계정 목록 초기화
-        self.filter_accounts("")
-        
-        # 정보창 17개 및 투명 여백(한칸 띄어주고) 배치
-        info_box = self.root.get_screen('char_info').ids.info_container
-        for i, group in enumerate(self.info_groups):
-            for name, val in group:
-                info_box.add_widget(MDTextField(hint_text=name, text=val, mode="line"))
-            if i < len(self.info_groups) - 1:
-                # 제1원칙 준수: 화면에 안보이는 투명 여백
-                info_box.add_widget(Widget(size_hint_y=None, height="25dp"))
+    def show_error_popup(self, error_msg):
+        content = ErrorDialogContent()
+        content.error_text = error_msg
+        self.dialog = MDDialog(
+            title="시스템 오류 발생",
+            type="custom",
+            content_cls=content,
+            buttons=[MDFlatButton(text="확인", on_release=lambda x: self.dialog.dismiss())]
+        )
+        self.dialog.open()
 
-        # 장비창 11개 목록 고정 배치
-        gear_list = self.root.get_screen('char_gear').ids.gear_list
-        for name in self.gear_names:
-            gear_list.add_widget(OneLineListItem(text=name))
-
-    def filter_accounts(self, query):
-        # [전체 검색 기능] 어느 계정에 있는지 즉시 필터링
-        acc_list = self.root.get_screen('account').ids.account_list
-        acc_list.clear_widgets()
-        for acc in self.all_accounts:
-            if query.lower() in acc.lower():
-                acc_list.add_widget(OneLineListItem(text=f"계정: {acc}", on_release=self.go_to_char_select))
-
-    def go_to_char_select(self, instance):
-        self.root.current = 'char_select'
-
-    def add_inv_item(self):
-        self.root.get_screen('inventory').ids.inv_list.add_widget(InventoryItem(item_text="신규 아이템"))
-
-    def pick_photos(self):
-        print("Android 14 갤러리 접근 및 권한 허용/멀티 선택 로직 작동")
-
-    def show_error_on_screen(self, error_msg):
-        self.root.add_widget(ErrorOverlay(error_text=error_msg))
-
-if __name__ == '__main__':
-    RPGManagerApp().run()
+if __name__ == "__main__":
+    RPGApp().run()
