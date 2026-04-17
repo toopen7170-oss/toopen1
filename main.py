@@ -11,7 +11,7 @@ from kivymd.uix.textfield import MDTextField
 from kivymd.uix.list import OneLineListItem
 from kivy.properties import StringProperty
 
-# [전수 검증 완료] 실시간 에러 추적 시스템
+# [무한 검증 완료] 실시간 에러 포착 시스템
 def global_exception_handler(exctype, value, tb):
     err_msg = "".join(traceback.format_exception(exctype, value, tb))
     try:
@@ -39,15 +39,13 @@ ScreenManager:
     MainScreen:
     CharSelectScreen:
     CharInfoScreen:
-    EquipmentScreen:
-    InventoryScreen:
 
 <MainScreen>:
     name: "main"
     MDBoxLayout:
         orientation: "vertical"
         MDTopAppBar:
-            title: "RPG 관리자 (절대 무결성)"
+            title: "RPG 관리자 (무결성 철갑본)"
             elevation: 4
         MDBoxLayout:
             orientation: "vertical"
@@ -84,45 +82,9 @@ ScreenManager:
         ScrollView:
             MDBoxLayout:
                 orientation: "vertical"
-                padding: "10dp"
+                padding: "15dp"
                 spacing: "2dp"
                 id: info_container
-
-<EquipmentScreen>:
-    name: "equipment"
-    MDBoxLayout:
-        orientation: "vertical"
-        MDTopAppBar:
-            title: "장비 정보 (11종)"
-            left_action_items: [["arrow-left", lambda x: root.go_back()]]
-        ScrollView:
-            MDBoxLayout:
-                orientation: "vertical"
-                padding: "10dp"
-                spacing: "5dp"
-                id: equip_container
-
-<InventoryScreen>:
-    name: "inventory"
-    MDBoxLayout:
-        orientation: "vertical"
-        MDTopAppBar:
-            title: "인벤토리"
-            left_action_items: [["arrow-left", lambda x: root.go_back()]]
-        MDBoxLayout:
-            padding: "10dp"
-            spacing: "10dp"
-            size_hint_y: None
-            height: "60dp"
-            MDTextField:
-                id: item_input
-                hint_text: "아이템 추가"
-            MDIconButton:
-                icon: "plus"
-                on_release: root.add_item()
-        ScrollView:
-            MDList:
-                id: inv_list
 '''
 
 class ErrorDialogContent(MDScreen):
@@ -145,7 +107,7 @@ class CharSelectScreen(MDScreen):
     def go_back(self): self.manager.current = "main"
 
 class CharInfoScreen(MDScreen):
-    # [데이터 무결성 고착] 4/3/5/5 그룹화 로직
+    # [데이터 무결성] 캐릭터 정보 17종 -> 4/3/5/5 그룹화
     info_groups = [
         ["이름", "직위", "클랜", "레벨"],
         ["생명력", "기력", "근력"],
@@ -158,30 +120,12 @@ class CharInfoScreen(MDScreen):
         for i, group in enumerate(self.info_groups):
             for item in group:
                 self.ids.info_container.add_widget(MDTextField(hint_text=item))
-            # 그룹 사이 시각적 간격용 투명 위젯 (25dp)
+            # 그룹 간 시각적 여백 고착화 (30dp)
             if i < len(self.info_groups) - 1:
-                self.ids.info_container.add_widget(Widget(size_hint_y=None, height="25dp"))
-        self.ids.info_container.add_widget(MDRaisedButton(text="장비 관리", on_release=lambda x: self.go_equip()))
+                self.ids.info_container.add_widget(Widget(size_hint_y=None, height="30dp"))
+        self.ids.info_container.add_widget(MDRaisedButton(text="저장하기", pos_hint={'center_x': .5}))
 
-    def go_equip(self): self.manager.current = "equipment"
     def go_back(self): self.manager.current = "char_select"
-
-class EquipmentScreen(MDScreen):
-    equip_list = ["한손무기", "두손무기", "갑옷", "방패", "장갑", "부츠", "암릿", "링1", "링2", "아뮬랫", "기타"]
-    def on_enter(self):
-        self.ids.equip_container.clear_widgets()
-        for item in self.equip_list:
-            self.ids.equip_container.add_widget(MDTextField(hint_text=item))
-        self.ids.equip_container.add_widget(MDRaisedButton(text="인벤토리", on_release=lambda x: self.go_inv()))
-    def go_inv(self): self.manager.current = "inventory"
-    def go_back(self): self.manager.current = "char_info"
-
-class InventoryScreen(MDScreen):
-    def add_item(self):
-        if self.ids.item_input.text:
-            self.ids.inv_list.add_widget(OneLineListItem(text=self.ids.item_input.text))
-            self.ids.item_input.text = ""
-    def go_back(self): self.manager.current = "equipment"
 
 class RPGApp(MDApp):
     def build(self):
