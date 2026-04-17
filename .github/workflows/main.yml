@@ -3,6 +3,7 @@ name: Build Android APK
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -17,22 +18,34 @@ jobs:
         with:
           python-version: '3.11'
 
-      # [환경 절연] NDK v27 간섭 차단 및 r26b 설정
+      # [환경 절연] 시스템 NDK v27 간섭을 원천 차단하고 필수 라이브러리 설치
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libsqlite3-dev
+          sudo apt-get install -y libsqlite3-dev python3-setuptools libffi-dev build-essential
           pip install --upgrade pip
-          pip install buildozer kivy kivymd
+          pip install buildozer kivy kivymd pillow
 
+      # [빌드 실행 및 로그 캡처] 모든 출력 내용을 build_log.txt에 실시간 저장
       - name: Build with Buildozer
         id: buildozer
         run: |
-          # 로그를 파일로 저장하도록 설정
+          # NDK_HOME 변수를 해제하여 서버 기본 v27 사용을 방지
+          unset ANDROID_NDK_HOME
           buildozer android debug 2>&1 | tee build_log.txt
         continue-on-error: true
 
-      # [오류 보고 시스템] 빌드 실패 시 로그 파일 업로드 (Artifacts)
+      # [결과물 1] 빌드 성공 시 APK 파일 업로드
+      - name: Upload APK on Success
+        if: steps.buildozer.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: RPG-Manager-APK
+          path: bin/*.apk
+          retention-days: 5
+
+      # [결과물 2] 빌드 실패 시 에러 로그 파일 업로드 (사용자 요청 사항)
+      # 실패 시 이 파일을 다운로드하여 핸드폰 Error 폴더에 넣으시면 됩니다.
       - name: Upload Error Log on Failure
         if: steps.buildozer.outcome == 'failure'
         uses: actions/upload-artifact@v4
