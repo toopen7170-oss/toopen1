@@ -26,31 +26,32 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libsqlite3-dev python3-setuptools libffi-dev build-essential zip libltdl-dev
           pip install --upgrade pip
-          # 전수 검사 결과: NDK r26b와 최적의 정합성을 가진 Cython 버전 고정
+          # 전수 검사 결과: NDK r26b 환경에 최적화된 Cython 버전 고정
           pip install Cython==0.29.33 buildozer kivy kivymd pillow
 
       - name: Build with Buildozer
         run: |
-          # [환경 절연] 서버 기본 NDK 설정 제거
+          # [환경 절연]
           unset ANDROID_NDK
           unset ANDROID_NDK_HOME
           unset ANDROID_NDK_ROOT
           unset ANDROID_NDK_LATEST_HOME
           
-          # [SDK 경로 강제 고착] Buildozer가 tools/bin을 찾지 않도록 표준 경로 주입
-          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
-          export BUILDOZER_ANDROID_SDK_PATH=$ANDROID_HOME
-          export BUILDOZER_ANDROID_NDK_PATH=$ANDROID_HOME/ndk-bundle
+          # [핵심 교정] buildozer.spec의 경로 설정을 서버 표준 환경($ANDROID_HOME)으로 강제 덮어쓰기
+          # 이 작업으로 "tools/bin/sdkmanager" 미존재 오류를 원천 차단합니다.
+          sed -i "s|^#\?android.sdk_path =.*|android.sdk_path = $ANDROID_HOME|" buildozer.spec
+          sed -i "s|^#\?android.ndk_path =.*|android.ndk_path = $ANDROID_HOME/ndk-bundle|" buildozer.spec
+          sed -i "s|^#\?android.accept_sdk_license =.*|android.accept_sdk_license = True|" buildozer.spec
 
-          # [라이선스 물리 주입] 질문 단계를 생략하기 위한 해시값 생성
+          # [라이선스 물리 주입]
           mkdir -p ~/.buildozer/android/platform/android-sdk/licenses
           echo -e "\n8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb7437c3550b3118b226\n24333f8a63b6825ea9d5513f8e07f45a561f2210" > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-          echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-preview-license
           
-          # 보조 라이선스 승인
+          # 보조 경로 확보 및 라이선스 확인
+          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
           yes | sdkmanager --licenses || true
           
-          # 빌드 실행 (전수 검증 완료된 커맨드)
+          # 빌드 실행
           buildozer android debug
 
       - name: Upload APK on Success
