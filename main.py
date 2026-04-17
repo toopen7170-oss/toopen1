@@ -11,7 +11,7 @@ from kivymd.uix.textfield import MDTextField
 from kivymd.uix.list import OneLineListItem
 from kivy.properties import StringProperty
 
-# [전수 검사 완료] 실시간 에러 전광판 로직
+# [전수 검증 완료] 실시간 에러 전광판
 def global_exception_handler(exctype, value, tb):
     err_msg = "".join(traceback.format_exception(exctype, value, tb))
     try:
@@ -145,7 +145,7 @@ class CharSelectScreen(MDScreen):
     def go_back(self): self.manager.current = "main"
 
 class CharInfoScreen(MDScreen):
-    # [제1원칙 고착화] 캐릭터 정보 4개 그룹 분리
+    # [제1원칙 고착화] 캐릭터 정보 17종 -> 4/3/5/5 그룹화
     info_groups = [
         ["이름", "직위", "클랜", "레벨"],
         ["생명력", "기력", "근력"],
@@ -158,7 +158,7 @@ class CharInfoScreen(MDScreen):
         for i, group in enumerate(self.info_groups):
             for item in group:
                 self.ids.info_container.add_widget(MDTextField(hint_text=item))
-            # 그룹 사이 시각적 간격 (화면에는 표시되지 않는 투명 위젯)
+            # 그룹 간 시각적 간격 (투명 위젯 삽입)
             if i < len(self.info_groups) - 1:
                 self.ids.info_container.add_widget(Widget(size_hint_y=None, height="25dp"))
         self.ids.info_container.add_widget(MDRaisedButton(text="장비 관리", on_release=lambda x: self.go_equip()))
