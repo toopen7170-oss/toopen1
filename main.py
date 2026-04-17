@@ -114,7 +114,7 @@ class MainScreen(BaseScreen):
             LogicMonitor.report("목록 갱신", e)
 
 class DetailScreen(BaseScreen):
-    """[교정] 정보창 17개 필드 (image_9.png 100% 일치)"""
+    """[교정] 정보창 17개 필드 (사진 기반 100% 일치)"""
     current_acc = StringProperty("")
     def on_enter(self):
         self.clear_widgets()
@@ -157,7 +157,7 @@ class DetailScreen(BaseScreen):
             LogicMonitor.report("데이터 저장", e)
 
 class EquipScreen(BaseScreen):
-    """[교정] 장비창 11개 필드 (image_10.png 100% 일치)"""
+    """[교정] 장비창 11개 필드 (사진 기반 100% 일치)"""
     def on_enter(self):
         self.clear_widgets()
         layout = BoxLayout(orientation='vertical', padding=15, spacing=10)
@@ -166,14 +166,18 @@ class EquipScreen(BaseScreen):
         grid.bind(minimum_height=grid.setter('height'))
         
         # 사진 image_10.png 기반 11개 항목
-        items = ["한손무기", "두손무기", "갑옷", "방패", "장갑", "부츠", "암릿", "링", "링", "아뮬렛", "기타"]
+        # 고유 ID 부여로 중복된 '링' 항목 간섭 방지
+        items = [
+            ("한손무기", "w1"), ("두손무기", "w2"), ("갑옷", "arm"), ("방패", "sh"),
+            ("장갑", "gl"), ("부츠", "bt"), ("암릿", "am"), ("링", "r1"),
+            ("링", "r2"), ("아뮬렛", "amu"), ("기타", "etc")
+        ]
         
-        for i in items:
+        for name, key in items:
             row = BoxLayout(size_hint_y=None, height=110, spacing=10)
-            lbl = Label(text=i, size_hint_x=0.25)
+            lbl = Label(text=name, size_hint_x=0.25)
             if HAS_FONT: lbl.font_name = "CustomFont"
-            ti = CustomTextInput(hint_text="옵션 입력...")
-            # [추가] 사진 업로드 버튼 토대
+            ti = CustomTextInput(hint_text=f"{name} 옵션...")
             cam_btn = Button(text="📷", size_hint_x=0.15)
             row.add_widget(lbl); row.add_widget(ti); row.add_widget(cam_btn)
             grid.add_widget(row)
