@@ -11,7 +11,7 @@ from kivymd.uix.textfield import MDTextField
 from kivymd.uix.list import OneLineListItem, TwoLineAvatarIconListItem, IconLeftWidget
 from kivy.properties import StringProperty
 
-# [무한 검증] 실시간 에러 포착 시스템
+# [무한 검증] 실시간 에러 포착 및 강제 로깅
 def global_exception_handler(exctype, value, tb):
     err_msg = "".join(traceback.format_exception(exctype, value, tb))
     try:
@@ -52,7 +52,8 @@ ScreenManager:
             elevation: 4
         MDBoxLayout:
             orientation: "vertical"
-            padding: "10dp": spacing: "10dp"
+            padding: "10dp"
+            spacing: "10dp"
             MDTextField:
                 id: search_bar
                 hint_text: "계정 ID 전체검색바"
@@ -68,7 +69,9 @@ ScreenManager:
             title: "케릭선택창 (6개 슬롯)"
             left_action_items: [["arrow-left", lambda x: root.go_back()]]
         MDGridLayout:
-            cols: 2: padding: "20dp": spacing: "20dp"
+            cols: 2
+            padding: "20dp"
+            spacing: "20dp"
             id: char_slots
 
 <CharInfoScreen>:
@@ -80,7 +83,9 @@ ScreenManager:
             left_action_items: [["arrow-left", lambda x: root.go_back()]]
         ScrollView:
             MDBoxLayout:
-                orientation: "vertical": padding: "15dp": spacing: "2dp"
+                orientation: "vertical"
+                padding: "15dp"
+                spacing: "2dp"
                 id: info_container
 
 <EquipmentScreen>:
@@ -92,7 +97,9 @@ ScreenManager:
             left_action_items: [["arrow-left", lambda x: root.go_back()]]
         ScrollView:
             MDBoxLayout:
-                orientation: "vertical": padding: "10dp": spacing: "5dp"
+                orientation: "vertical"
+                padding: "10dp"
+                spacing: "5dp"
                 id: equip_list
 
 <InventoryScreen>:
@@ -100,7 +107,7 @@ ScreenManager:
     MDBoxLayout:
         orientation: "vertical"
         MDTopAppBar:
-            title: "인벤토리창 (수정/저장/삭제)"
+            title: "인벤토리창 (저장/삭제/수정)"
             left_action_items: [["arrow-left", lambda x: root.go_back()]]
         ScrollView:
             MDList:
@@ -114,14 +121,19 @@ ScreenManager:
             title: "사진선택창"
             left_action_items: [["arrow-left", lambda x: root.go_back()]]
         MDBoxLayout:
-            orientation: "vertical": padding: "20dp": spacing: "20dp"
+            orientation: "vertical"
+            padding: "20dp"
+            spacing: "20dp"
             MDLabel:
                 text: "핸드폰 사진 다중 선택 및 업로드/다운로드"
                 halign: "center"
             MDRaisedButton:
-                text: "저장버튼": pos_hint: {"center_x": .5}
+                text: "저장버튼"
+                pos_hint: {"center_x": .5}
             MDRaisedButton:
-                text: "삭제버튼": md_bg_color: 1, 0, 0, 1: pos_hint: {"center_x": .5}
+                text: "삭제버튼"
+                md_bg_color: 1, 0, 0, 1
+                pos_hint: {"center_x": .5}
 '''
 
 class ErrorDialogContent(MDScreen):
@@ -157,7 +169,7 @@ class CharInfoScreen(MDScreen):
         for i, group in enumerate(self.groups):
             for label, val in group:
                 self.ids.info_container.add_widget(MDTextField(hint_text=label, text=val))
-            # [제1원칙] (한칸 띄어주고) - 투명 위젯 처리
+            # [제1원칙] (한칸 띄어주고) - 화면에는 보이지 않는 투명 위젯
             if i < len(self.groups) - 1:
                 self.ids.info_container.add_widget(Widget(size_hint_y=None, height="30dp"))
         self.ids.info_container.add_widget(MDRaisedButton(text="장비창 이동", on_release=lambda x: self.go_equip()))
@@ -176,11 +188,11 @@ class EquipmentScreen(MDScreen):
     def go_back(self): self.manager.current = "char_info"
 
 class InventoryScreen(MDScreen):
+    # [제1원칙] 저장/삭제 버튼 및 클릭 수정 로직
     def on_enter(self):
         self.ids.inv_list.clear_widgets()
         for i in range(5):
-            # [제1원칙] 저장/삭제 버튼 및 클릭 수정 로직
-            item = TwoLineAvatarIconListItem(text=f"인벤 아이템 {i}", secondary_text="클릭 시 수정 가능")
+            item = TwoLineAvatarIconListItem(text=f"아이템 {i}", secondary_text="클릭 시 전체글씨 확인 및 수정")
             item.add_widget(IconLeftWidget(icon="content-save", on_release=lambda x: print("저장")))
             item.on_release = self.go_photo
             self.ids.inv_list.add_widget(item)
