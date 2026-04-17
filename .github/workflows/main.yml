@@ -26,28 +26,31 @@ jobs:
 
       - name: Build with Buildozer
         run: |
-          # [철갑 경로 및 라이선스 고착 로직]
+          # [철갑 경로 고착 로직]
           export ANDROID_HOME="/usr/local/lib/android/sdk"
           export ANDROID_SDK_ROOT="/usr/local/lib/android/sdk"
           
+          # Buildozer 내부 SDK 경로 선점 및 물리적 연결
           SDK_TARGET="/home/runner/.buildozer/android/platform/android-sdk"
           mkdir -p "$SDK_TARGET/licenses"
           mkdir -p "$SDK_TARGET/tools/bin"
           mkdir -p "$SDK_TARGET/cmdline-tools/latest/bin"
+          mkdir -p "$SDK_TARGET/platform-tools"
           
-          # [핵심] 최신 build-tools 37 및 모든 라이선스 해시값 강제 주입
+          # [라이선스 강제 주입] 37 버전 포함 모든 라이선스 승인
           cp -r $ANDROID_HOME/licenses/* "$SDK_TARGET/licenses/" || true
           echo -e "\n8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb7437c3550b3118b226\n24333f8a63b6825ea9d5513f8e07f45a561f2210\n47bc30227b11c91942080a29497e7046ce36e6" > "$SDK_TARGET/licenses/android-sdk-license"
           
-          # aidl 및 sdkmanager 물리적 경로 연결 (Aidl not found 방어)
-          ln -s "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "$SDK_TARGET/tools/bin/sdkmanager" || true
-          ln -s "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "$SDK_TARGET/cmdline-tools/latest/bin/sdkmanager" || true
+          # [바이너리 강제 연결] sdkmanager 및 aidl 실종 차단
+          ln -sf "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "$SDK_TARGET/tools/bin/sdkmanager" || true
+          ln -sf "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "$SDK_TARGET/cmdline-tools/latest/bin/sdkmanager" || true
+          ln -sf "$ANDROID_HOME/platform-tools/aidl" "$SDK_TARGET/platform-tools/aidl" || true
           
-          # Buildozer가 찾는 특정 위치에 aidl 강제 링크
+          # 구형 빌드 도구 경로 대응 (Aidl not found 방어)
           mkdir -p "$SDK_TARGET/build-tools/34.0.0"
-          ln -s "$ANDROID_HOME/build-tools/34.0.0/aidl" "$SDK_TARGET/build-tools/34.0.0/aidl" || true
+          ln -sf "$ANDROID_HOME/build-tools/34.0.0/aidl" "$SDK_TARGET/build-tools/34.0.0/aidl" || true
 
-          # spec 파일 실시간 경로 수정
+          # spec 파일 실시간 경로 고착
           sed -i "s|^#\?android.sdk_path =.*|android.sdk_path = $ANDROID_HOME|" buildozer.spec
           sed -i "s|^#\?android.accept_sdk_license =.*|android.accept_sdk_license = True|" buildozer.spec
           
