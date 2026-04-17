@@ -169,7 +169,7 @@ class CharInfoScreen(MDScreen):
         for i, group in enumerate(self.groups):
             for label, val in group:
                 self.ids.info_container.add_widget(MDTextField(hint_text=label, text=val))
-            # [제1원칙] (한칸 띄어주고) - 투명 위젯 처리
+            # [제1원칙] 그룹 간 간격 고착
             if i < len(self.groups) - 1:
                 self.ids.info_container.add_widget(Widget(size_hint_y=None, height="30dp"))
         self.ids.info_container.add_widget(MDRaisedButton(text="장비창 이동", on_release=lambda x: self.go_equip()))
