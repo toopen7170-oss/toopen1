@@ -26,7 +26,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libsqlite3-dev python3-setuptools libffi-dev build-essential zip libltdl-dev
           pip install --upgrade pip
-          # 전수 검사 결과: r26b 환경 최적화 버전 고정
+          # 전수 검증 결과: NDK r26b와 최적의 정합성을 가진 Cython 버전 고정
           pip install Cython==0.29.33 buildozer kivy kivymd pillow
 
       - name: Build with Buildozer
@@ -36,21 +36,22 @@ jobs:
           unset ANDROID_NDK_HOME
           unset ANDROID_NDK_ROOT
           
-          # [물리적 강제 이식 로직]
-          # 1. Buildozer SDK 작업 경로 생성
-          mkdir -p ~/.buildozer/android/platform/android-sdk/licenses
+          # [핵심 교정: 물리적 부품 이식]
+          # Buildozer가 스스로 SDK를 구성하다 실패하지 않도록 서버의 정상 SDK를 주입합니다.
+          SDK_PATH="/home/runner/.buildozer/android/platform/android-sdk"
+          mkdir -p "$SDK_PATH/licenses"
           
-          # 2. 서버의 정상 라이선스/부품을 Buildozer 폴더로 강제 복사 (aidl 실종 해결)
-          cp -r $ANDROID_HOME/licenses/* ~/.buildozer/android/platform/android-sdk/licenses/ || true
+          # 서버에 이미 승인된 라이선스 전체 복사 (Aidl 및 라이선스 거부 동시 해결)
+          cp -r $ANDROID_HOME/licenses/* "$SDK_PATH/licenses/" || true
           
-          # 3. buildozer.spec 실시간 경로 동기화
-          sed -i "s|^#\?android.sdk_path =.*|android.sdk_path = /home/runner/.buildozer/android/platform/android-sdk|" buildozer.spec
+          # [라이선스 해시 고착화]
+          echo -e "\n8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb7437c3550b3118b226\n24333f8a63b6825ea9d5513f8e07f45a561f2210" > "$SDK_PATH/licenses/android-sdk-license"
+          
+          # buildozer.spec 실시간 경로 동기화
+          sed -i "s|^#\?android.sdk_path =.*|android.sdk_path = $SDK_PATH|" buildozer.spec
           sed -i "s|^#\?android.accept_sdk_license =.*|android.accept_sdk_license = True|" buildozer.spec
 
-          # [라이선스 해시 주입] build-tools 37 대응
-          echo -e "\n8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb7437c3550b3118b226\n24333f8a63b6825ea9d5513f8e07f45a561f2210" > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-          
-          # 보조 승인 및 빌드 실행
+          # 보조 경로 확보 및 빌드 실행
           export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
           yes | sdkmanager --licenses || true
           
