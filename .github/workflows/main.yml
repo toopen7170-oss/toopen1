@@ -26,38 +26,38 @@ jobs:
 
       - name: Build with Buildozer
         run: |
-          # [철갑 경로 고착 로직]
+          # [시나리오 1: 환경 변수 절대 고착]
           export ANDROID_HOME="/usr/local/lib/android/sdk"
           export ANDROID_SDK_ROOT="/usr/local/lib/android/sdk"
+          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/tools/bin:$PATH"
           
-          # Buildozer 내부 SDK 경로 선점 및 물리적 연결
+          # [시나리오 2: Buildozer 가상 경로 물리적 점유]
+          # 빌드 엔진이 도구를 찾으러 오는 위치에 미리 실제 도구를 이식합니다.
           SDK_TARGET="/home/runner/.buildozer/android/platform/android-sdk"
-          mkdir -p "$SDK_TARGET/licenses"
-          mkdir -p "$SDK_TARGET/tools/bin"
-          mkdir -p "$SDK_TARGET/cmdline-tools/latest/bin"
-          mkdir -p "$SDK_TARGET/platform-tools"
+          mkdir -p "$SDK_TARGET"
           
-          # [핵심] build-tools 37 및 모든 라이선스 해시값 강제 주입 (오류 0개 고착)
-          cp -r $ANDROID_HOME/licenses/* "$SDK_TARGET/licenses/" || true
+          # 라이선스 및 핵심 도구 강제 복사 (심볼릭 링크보다 강력한 대응)
+          cp -r "$ANDROID_HOME/licenses" "$SDK_TARGET/" || true
+          
+          # [시나리오 3: 37 버전 및 모든 라이선스 즉시 승인 고착]
           echo -e "\n8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb7437c3550b3118b226\n24333f8a63b6825ea9d5513f8e07f45a561f2210\n47bc30227b11c91942080a29497e7046ce36e6" > "$SDK_TARGET/licenses/android-sdk-license"
           
-          # [바이너리 고착] sdkmanager 및 aidl 실종 차단 (심볼릭 링크 3중 강화)
-          ln -sf "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "$SDK_TARGET/tools/bin/sdkmanager" || true
-          ln -sf "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "$SDK_TARGET/cmdline-tools/latest/bin/sdkmanager" || true
+          # [시나리오 4: 바이너리 경로 3중 그물망 구축]
+          mkdir -p "$SDK_TARGET/tools/bin"
+          mkdir -p "$SDK_TARGET/cmdline-tools/latest/bin"
+          ln -sf "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "$SDK_TARGET/tools/bin/sdkmanager"
+          ln -sf "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "$SDK_TARGET/cmdline-tools/latest/bin/sdkmanager"
           ln -sf "$ANDROID_HOME/platform-tools/aidl" "$SDK_TARGET/platform-tools/aidl" || true
-          
-          # 구형 빌드 도구 경로 대응 (Aidl not found 방어)
-          mkdir -p "$SDK_TARGET/build-tools/34.0.0"
-          ln -sf "$ANDROID_HOME/build-tools/34.0.0/aidl" "$SDK_TARGET/build-tools/34.0.0/aidl" || true
 
-          # spec 파일 실시간 경로 고착 및 라이선스 자동 수락
+          # [시나리오 5: spec 파일 실시간 경로 강제 수정]
           sed -i "s|^#\?android.sdk_path =.*|android.sdk_path = $ANDROID_HOME|" buildozer.spec
           sed -i "s|^#\?android.accept_sdk_license =.*|android.accept_sdk_license = True|" buildozer.spec
           
+          # 로그 레벨을 높여 모든 시나리오를 추적합니다.
           buildozer -v android debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: PT1-Manager-Final
+          name: PT1-Manager-Scenario-Fixed
           path: bin/*.apk
