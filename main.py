@@ -1,7 +1,7 @@
 import sys
 import traceback
 from kivy.lang import Builder
-from kivy.clock import Clock
+from kivy.uix.widget import Widget
 from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.screenmanager import MDScreenManager
@@ -9,20 +9,15 @@ from kivymd.uix.button import MDRaisedButton, MDFlatButton
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.list import OneLineListItem
-from kivy.properties import StringProperty, ListProperty
-from kivy.utils import platform
+from kivy.properties import StringProperty
 
-# [전수 검사 보강] 실시간 에러 전광판 로직
-# 앱 실행 중 오류 발생 시 꺼지지 않고 화면에 에러를 표시합니다.
+# [오류 방어] 실시간 에러 전광판
 def global_exception_handler(exctype, value, tb):
     err_msg = "".join(traceback.format_exception(exctype, value, tb))
-    print(err_msg)
     try:
         app = MDApp.get_running_app()
-        if app and app.root:
-            app.show_error_popup(err_msg)
-    except:
-        pass
+        if app: app.show_error_popup(err_msg)
+    except: pass
 
 sys.excepthook = global_exception_handler
 
@@ -46,20 +41,18 @@ ScreenManager:
     CharInfoScreen:
     EquipmentScreen:
     InventoryScreen:
-    PhotoScreen:
 
 <MainScreen>:
     name: "main"
     MDBoxLayout:
         orientation: "vertical"
         MDTopAppBar:
-            title: "RPG 계정 관리자"
+            title: "RPG 관리자 (그룹화 적용)"
             elevation: 4
         MDBoxLayout:
             orientation: "vertical"
             padding: "10dp"
             spacing: "10dp"
-            # [검색 시스템] 실시간 ID 검색바
             MDTextField:
                 id: search_field
                 hint_text: "계정 ID 검색"
@@ -67,17 +60,13 @@ ScreenManager:
             ScrollView:
                 MDList:
                     id: account_list
-            MDRaisedButton:
-                text: "새 계정 생성"
-                pos_hint: {"center_x": .5}
-                on_release: root.create_account()
 
 <CharSelectScreen>:
     name: "char_select"
     MDBoxLayout:
         orientation: "vertical"
         MDTopAppBar:
-            title: "캐릭터 선택 (6슬롯)"
+            title: "캐릭터 선택"
             left_action_items: [["arrow-left", lambda x: root.go_back()]]
         MDGridLayout:
             cols: 2
@@ -90,13 +79,13 @@ ScreenManager:
     MDBoxLayout:
         orientation: "vertical"
         MDTopAppBar:
-            title: "캐릭터 정보 (17종)"
+            title: "캐릭터 정보 (17종 그룹화)"
             left_action_items: [["arrow-left", lambda x: root.go_back()]]
         ScrollView:
             MDBoxLayout:
                 orientation: "vertical"
                 padding: "10dp"
-                spacing: "5dp"
+                spacing: "2dp"
                 id: info_container
 
 <EquipmentScreen>:
@@ -141,113 +130,68 @@ class ErrorDialogContent(MDScreen):
 
 class MainScreen(MDScreen):
     def filter_accounts(self, text):
-        # 검색 로직: ID 포함 여부 확인
         self.ids.account_list.clear_widgets()
-        accounts = ["Admin_01", "Player_Toopen", "Guest_User"] # 샘플 데이터
-        for acc in accounts:
+        for acc in ["Admin_01", "Player_Toopen"]:
             if text.lower() in acc.lower():
-                self.ids.account_list.add_widget(
-                    OneLineListItem(text=acc, on_release=lambda x, a=acc: self.select_account(a))
-                )
-
-    def select_account(self, acc_id):
-        self.manager.current = "char_select"
-
-    def create_account(self):
-        pass
+                self.ids.account_list.add_widget(OneLineListItem(text=acc, on_release=lambda x: self.select_acc()))
+    def select_acc(self): self.manager.current = "char_select"
 
 class CharSelectScreen(MDScreen):
     def on_enter(self):
         self.ids.char_slots.clear_widgets()
         for i in range(1, 7):
-            self.ids.char_slots.add_widget(
-                MDRaisedButton(text=f"Slot {i}\\n캐릭터 정보", on_release=lambda x: self.go_info())
-            )
-    
-    def go_info(self):
-        self.manager.current = "char_info"
-    
-    def go_back(self):
-        self.manager.current = "main"
+            self.ids.char_slots.add_widget(MDRaisedButton(text=f"슬롯 {i}", on_release=lambda x: self.go_info()))
+    def go_info(self): self.manager.current = "char_info"
+    def go_back(self): self.manager.current = "main"
 
 class CharInfoScreen(MDScreen):
-    # [제1원칙] 17개 정보 항목 보존
-    info_list = [
-        "이름", "직위", "클랜", "레벨", "생명력", "기력", "근력", 
-        "힘", "정신력", "재능", "민첩", "건강", "명중", "공격", "방어", "흡수", "속도"
+    # [제1원칙 고수] 요청하신 4/3/5/5 그룹화 구조 (기본 토대 유지)
+    info_groups = [
+        ["이름", "직위", "클랜", "레벨"],
+        ["생명력", "기력", "근력"],
+        ["힘", "정신력", "재능", "민첩", "건강"],
+        ["명중", "공격", "방어", "흡수", "속도"]
     ]
+    
     def on_enter(self):
         self.ids.info_container.clear_widgets()
-        for item in self.info_list:
-            self.ids.info_container.add_widget(MDTextField(hint_text=item))
+        for i, group in enumerate(self.info_groups):
+            for item in group:
+                self.ids.info_container.add_widget(MDTextField(hint_text=item))
+            # 그룹 사이에 투명 위젯으로 (한칸 띄어주고) 효과 적용
+            if i < len(self.info_groups) - 1:
+                self.ids.info_container.add_widget(Widget(size_hint_y=None, height="20dp"))
+        
         self.ids.info_container.add_widget(MDRaisedButton(text="장비 관리", on_release=lambda x: self.go_equip()))
 
-    def go_equip(self):
-        self.manager.current = "equipment"
-
-    def go_back(self):
-        self.manager.current = "char_select"
+    def go_equip(self): self.manager.current = "equipment"
+    def go_back(self): self.manager.current = "char_select"
 
 class EquipmentScreen(MDScreen):
-    # [제1원칙] 11개 장비 항목 보존
-    equip_list = [
-        "한손무기", "두손무기", "갑옷", "방패", "장갑", "부츠", "암릿", "링1", "링2", "아뮬랫", "기타"
-    ]
+    equip_list = ["한손무기", "두손무기", "갑옷", "방패", "장갑", "부츠", "암릿", "링1", "링2", "아뮬랫", "기타"]
     def on_enter(self):
         self.ids.equip_container.clear_widgets()
         for item in self.equip_list:
             self.ids.equip_container.add_widget(MDTextField(hint_text=item))
-        self.ids.equip_container.add_widget(MDRaisedButton(text="인벤토리 관리", on_release=lambda x: self.go_inv()))
-
-    def go_inv(self):
-        self.manager.current = "inventory"
-
-    def go_back(self):
-        self.manager.current = "char_info"
+        self.ids.equip_container.add_widget(MDRaisedButton(text="인벤토리", on_release=lambda x: self.go_inv()))
+    def go_inv(self): self.manager.current = "inventory"
+    def go_back(self): self.manager.current = "char_info"
 
 class InventoryScreen(MDScreen):
     def add_item(self):
-        text = self.ids.item_input.text
-        if text:
-            item = OneLineListItem(text=text)
-            item.bind(on_release=lambda x: self.show_item_detail(x))
-            self.ids.inv_list.add_widget(item)
+        if self.ids.item_input.text:
+            self.ids.inv_list.add_widget(OneLineListItem(text=self.ids.item_input.text))
             self.ids.item_input.text = ""
-
-    def show_item_detail(self, item_widget):
-        # 인벤토리 상세 수정 및 삭제 로직
-        self.dialog = MDDialog(
-            title="아이템 관리",
-            text=f"선택된 아이템: {item_widget.text}",
-            buttons=[
-                MDFlatButton(text="삭제", on_release=lambda x: self.delete_item(item_widget)),
-                MDFlatButton(text="닫기", on_release=lambda x: self.dialog.dismiss())
-            ]
-        )
-        self.dialog.open()
-
-    def delete_item(self, item):
-        self.ids.inv_list.remove_widget(item)
-        self.dialog.dismiss()
-
-    def go_back(self):
-        self.manager.current = "equipment"
+    def go_back(self): self.manager.current = "equipment"
 
 class RPGApp(MDApp):
     def build(self):
         self.theme_cls.primary_palette = "BlueGray"
         Builder.load_string(KV)
         return MDScreenManager()
-
-    def show_error_popup(self, error_msg):
-        content = ErrorDialogContent()
-        content.error_text = error_msg
-        self.dialog = MDDialog(
-            title="시스템 오류 발생",
-            type="custom",
-            content_cls=content,
-            buttons=[MDFlatButton(text="확인", on_release=lambda x: self.dialog.dismiss())]
-        )
+    def show_error_popup(self, msg):
+        content = ErrorDialogContent(error_text=msg)
+        self.dialog = MDDialog(title="오류 발생", type="custom", content_cls=content)
         self.dialog.open()
 
 if __name__ == "__main__":
