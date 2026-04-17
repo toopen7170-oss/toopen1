@@ -11,7 +11,7 @@ from kivymd.uix.textfield import MDTextField
 from kivymd.uix.list import OneLineListItem, TwoLineAvatarIconListItem, IconLeftWidget
 from kivy.properties import StringProperty
 
-# [무한 검증] 실시간 에러 포착 시스템
+# [무한 검증] 실시간 에러 포착 및 사용자 보고 시스템
 def global_exception_handler(exctype, value, tb):
     err_msg = "".join(traceback.format_exception(exctype, value, tb))
     try:
@@ -142,7 +142,7 @@ class ErrorDialogContent(MDScreen):
 class MainScreen(MDScreen):
     def on_enter(self):
         self.ids.account_list.clear_widgets()
-        # [제1원칙] 계정 ID 선택 목록 보존
+        # [제1원칙 고착] 계정 ID 선택 목록 보존
         for i in range(3):
             self.ids.account_list.add_widget(OneLineListItem(text=f"계정 ID {i}", on_release=lambda x: self.go_char()))
     def go_char(self): self.manager.current = "char_select"
@@ -150,14 +150,14 @@ class MainScreen(MDScreen):
 class CharSelectScreen(MDScreen):
     def on_enter(self):
         self.ids.char_slots.clear_widgets()
-        # [제1원칙] 6개의 선택창 보존
+        # [제1원칙 고착] 6개의 선택창 보존
         for i in range(1, 7):
             self.ids.char_slots.add_widget(MDRaisedButton(text=f"슬롯 {i}", on_release=lambda x: self.go_info()))
     def go_info(self): self.manager.current = "char_info"
     def go_back(self): self.manager.current = "main"
 
 class CharInfoScreen(MDScreen):
-    # [제1원칙] 4/3/5/5 구조 정확히 배치
+    # [제1원칙 고착] 4/3/5/5 구조 절대 보존
     groups = [
         [('이름', ''), ('직위', ''), ('클랜', ''), ('레벨', '')],
         [('생명력', ''), ('기력', ''), ('근력', '')],
@@ -169,7 +169,6 @@ class CharInfoScreen(MDScreen):
         for i, group in enumerate(self.groups):
             for label, val in group:
                 self.ids.info_container.add_widget(MDTextField(hint_text=label, text=val))
-            # [제1원칙] 그룹 간 간격 고착
             if i < len(self.groups) - 1:
                 self.ids.info_container.add_widget(Widget(size_hint_y=None, height="30dp"))
         self.ids.info_container.add_widget(MDRaisedButton(text="장비창 이동", on_release=lambda x: self.go_equip()))
@@ -177,7 +176,7 @@ class CharInfoScreen(MDScreen):
     def go_back(self): self.manager.current = "char_select"
 
 class EquipmentScreen(MDScreen):
-    # [제1원칙] 11종 목록 절대 보존
+    # [제1원칙 고착] 11종 목록 절대 보존
     items = ["한손무기", "두손무기", "갑옷", "방패", "장갑", "부츠", "암릿", "링1", "링2", "아뮬랫", "기타"]
     def on_enter(self):
         self.ids.equip_list.clear_widgets()
@@ -191,9 +190,9 @@ class InventoryScreen(MDScreen):
     def on_enter(self):
         self.ids.inv_list.clear_widgets()
         for i in range(5):
-            # [제1원칙] 저장/삭제 버튼 및 클릭 수정 로직 보존
+            # [제1원칙 고착] 저장/삭제 및 수정 로직 보존
             item = TwoLineAvatarIconListItem(text=f"아이템 {i}", secondary_text="클릭 시 수정 및 사진 선택")
-            item.add_widget(IconLeftWidget(icon="content-save", on_release=lambda x: print("저장")))
+            item.add_widget(IconLeftWidget(icon="content-save"))
             item.on_release = self.go_photo
             self.ids.inv_list.add_widget(item)
     def go_photo(self): self.manager.current = "photo_select"
