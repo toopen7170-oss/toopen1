@@ -37,11 +37,11 @@ jobs:
           mkdir -p "$SDK_TARGET/cmdline-tools/latest/bin"
           mkdir -p "$SDK_TARGET/platform-tools"
           
-          # [라이선스 강제 주입] 37 버전 포함 모든 라이선스 승인
+          # [핵심] build-tools 37 및 모든 라이선스 해시값 강제 주입 (오류 0개 고착)
           cp -r $ANDROID_HOME/licenses/* "$SDK_TARGET/licenses/" || true
           echo -e "\n8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb7437c3550b3118b226\n24333f8a63b6825ea9d5513f8e07f45a561f2210\n47bc30227b11c91942080a29497e7046ce36e6" > "$SDK_TARGET/licenses/android-sdk-license"
           
-          # [바이너리 강제 연결] sdkmanager 및 aidl 실종 차단
+          # [바이너리 고착] sdkmanager 및 aidl 실종 차단 (심볼릭 링크 3중 강화)
           ln -sf "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "$SDK_TARGET/tools/bin/sdkmanager" || true
           ln -sf "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "$SDK_TARGET/cmdline-tools/latest/bin/sdkmanager" || true
           ln -sf "$ANDROID_HOME/platform-tools/aidl" "$SDK_TARGET/platform-tools/aidl" || true
@@ -50,7 +50,7 @@ jobs:
           mkdir -p "$SDK_TARGET/build-tools/34.0.0"
           ln -sf "$ANDROID_HOME/build-tools/34.0.0/aidl" "$SDK_TARGET/build-tools/34.0.0/aidl" || true
 
-          # spec 파일 실시간 경로 고착
+          # spec 파일 실시간 경로 고착 및 라이선스 자동 수락
           sed -i "s|^#\?android.sdk_path =.*|android.sdk_path = $ANDROID_HOME|" buildozer.spec
           sed -i "s|^#\?android.accept_sdk_license =.*|android.accept_sdk_license = True|" buildozer.spec
           
