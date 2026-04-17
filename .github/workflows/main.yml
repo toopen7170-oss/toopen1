@@ -36,7 +36,10 @@ jobs:
           cp -r $ANDROID_HOME/licenses/* "$SDK_PATH/licenses/" || true
           echo -e "\n8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb7437c3550b3118b226\n24333f8a63b6825ea9d5513f8e07f45a561f2210\n47bc30227b11c91942080a29497e7046ce36e6" > "$SDK_PATH/licenses/android-sdk-license"
           
+          # aidl 및 sdkmanager 경로 강제 연결
           ln -s "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "$SDK_PATH/tools/bin/sdkmanager" || true
+          mkdir -p "$SDK_PATH/build-tools/34.0.0"
+          ln -s "$ANDROID_HOME/build-tools/34.0.0/aidl" "$SDK_PATH/build-tools/34.0.0/aidl" || true
           
           # spec 파일 강제 동기화
           sed -i "s|^#\?android.sdk_path =.*|android.sdk_path = $ANDROID_HOME|" buildozer.spec
