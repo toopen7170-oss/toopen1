@@ -11,7 +11,7 @@ from kivymd.uix.textfield import MDTextField
 from kivymd.uix.list import OneLineListItem, TwoLineAvatarIconListItem, IconLeftWidget
 from kivy.properties import StringProperty
 
-# [무한 검증] 실시간 에러 포착 및 사용자 보고 시스템
+# [무한 검증] 실시간 오류 포착 및 리포팅 시스템
 def global_exception_handler(exctype, value, tb):
     err_msg = "".join(traceback.format_exception(exctype, value, tb))
     try:
@@ -150,19 +150,19 @@ class MainScreen(MDScreen):
 class CharSelectScreen(MDScreen):
     def on_enter(self):
         self.ids.char_slots.clear_widgets()
-        # [제1원칙 고착] 6개의 선택창 보존
+        # [제1원칙 고착] 6개 슬롯 구조 보존
         for i in range(1, 7):
             self.ids.char_slots.add_widget(MDRaisedButton(text=f"슬롯 {i}", on_release=lambda x: self.go_info()))
     def go_info(self): self.manager.current = "char_info"
     def go_back(self): self.manager.current = "main"
 
 class CharInfoScreen(MDScreen):
-    # [제1원칙 고착] 4/3/5/5 구조 절대 보존
+    # [제1원칙 고착] 4/3/5/5 배치 절대 수호
     groups = [
-        [('이름', ''), ('직위', ''), ('클랜', ''), ('레벨', '')],
-        [('생명력', ''), ('기력', ''), ('근력', '')],
-        [('힘', ''), ('정신력', ''), ('재능', ''), ('민첩', ''), ('건강', '')],
-        [('명중', ''), ('공격', ''), ('방어', ''), ('흡수', ''), ('속도', '')]
+        [('이름', ''), ('직위', ''), ('클랜', ''), ('레벨', '')], # 4
+        [('생명력', ''), ('기력', ''), ('근력', '')],              # 3
+        [('힘', ''), ('정신력', ''), ('재능', ''), ('민첩', ''), ('건강', '')], # 5
+        [('명중', ''), ('공격', ''), ('방어', ''), ('흡수', ''), ('속도', '')]  # 5
     ]
     def on_enter(self):
         self.ids.info_container.clear_widgets()
@@ -190,7 +190,7 @@ class InventoryScreen(MDScreen):
     def on_enter(self):
         self.ids.inv_list.clear_widgets()
         for i in range(5):
-            # [제1원칙 고착] 저장/삭제 및 수정 로직 보존
+            # [제1원칙 고착] 저장/삭제 및 수정 로직 수호
             item = TwoLineAvatarIconListItem(text=f"아이템 {i}", secondary_text="클릭 시 수정 및 사진 선택")
             item.add_widget(IconLeftWidget(icon="content-save"))
             item.on_release = self.go_photo
