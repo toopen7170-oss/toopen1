@@ -11,10 +11,9 @@ from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.image import Image
-from kivy.uix.popup import Popup
 from kivy.graphics import Color, Rectangle
 
-# [48번 로직] 자가 진단 및 폰트/이미지 예외 처리
+# [48번 로직] 자가 진단 및 폰트/이미지 예외 처리 (생존벨트)
 try:
     if os.path.exists("font.ttf"):
         LabelBase.register(name="CustomFont", fn_regular="font.ttf")
@@ -50,7 +49,7 @@ class BaseScreen(Screen):
         self.bg_rect.size = self.size
         self.bg_rect.pos = self.pos
 
-# [원칙 1] 계정 생성창 (ID 선택창, 전체 검색바)
+# [원칙 1] 계정 생성창
 class AccountScreen(BaseScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -69,7 +68,7 @@ class AccountScreen(BaseScreen):
         layout.add_widget(scroll)
         self.add_widget(layout)
 
-# [원칙 2] 케릭선택창 (6개의 선택창)
+# [원칙 2] 케릭선택창 (6개 슬롯)
 class CharSelectScreen(BaseScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -83,7 +82,7 @@ class CharSelectScreen(BaseScreen):
         layout.add_widget(grid)
         self.add_widget(layout)
 
-# [원칙 3] 케릭정보창 (4/3/5/5 구조 및 화면에 안 보이는 간격)
+# [원칙 3] 케릭정보창 (4/3/5/5 구조 사수)
 class CharInfoScreen(BaseScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -109,7 +108,7 @@ class CharInfoScreen(BaseScreen):
         main_layout.add_widget(nav)
         self.add_widget(main_layout)
 
-# [원칙 4] 케릭장비창 (11종 목록 고착)
+# [원칙 4] 케릭장비창 (11종 목록)
 class EquipScreen(BaseScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -127,7 +126,7 @@ class EquipScreen(BaseScreen):
         layout.add_widget(nav)
         self.add_widget(layout)
 
-# [원칙 5] 인벤토리창 (저장/삭제 버튼, 클릭 시 수정)
+# [원칙 5] 인벤토리창
 class InventoryScreen(BaseScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -148,7 +147,7 @@ class InventoryScreen(BaseScreen):
         layout.add_widget(nav)
         self.add_widget(layout)
 
-# [원칙 6] 사진선택창 (다중선택, 업로드/다운로드, 권한, 저장/삭제)
+# [원칙 6] 사진선택창
 class PhotoScreen(BaseScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
