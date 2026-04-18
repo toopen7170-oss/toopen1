@@ -20,29 +20,29 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libsqlite3-dev python3-setuptools libffi-dev build-essential zip libltdl-dev ffmpeg libssl-dev autoconf automake libtool
+          sudo apt-get install -y libsqlite3-dev python3-setuptools libffi-dev build-essential zip libltdl-dev ffmpeg libssl-dev
           pip install --upgrade pip
           pip install Cython==0.29.33 buildozer kivy kivymd pillow requests
 
       - name: Build with Buildozer
         run: |
-          # 1. 시스템 SDK를 Buildozer 경로로 선제 연결
-          # Buildozer가 스스로 내려받다가 실패하는 것을 막기 위해 시스템 SDK를 링크합니다.
-          mkdir -p ~/.buildozer/android/platform
-          ln -sf /usr/local/lib/android/sdk ~/.buildozer/android/platform/android-sdk
-          
-          # 2. 라이선스 강제 동의 (모든 해시값 주입)
-          mkdir -p ~/.buildozer/android/platform/android-sdk/licenses
-          echo -e "8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb7437c3550b3118b226\n24333f8a71b3d813477583b0b00a6fe40192f722" > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-          
-          # 3. [핵심 수리] 환경 변수 강제 고정
-          # Buildozer가 내부적으로 작동할 때 시스템의 도구를 우선적으로 사용하게 합니다.
+          # 1. Buildozer가 설정 파일을 무시하지 못하도록 직접 경로를 박아넣습니다.
+          # 빌드 전 spec 파일의 SDK/NDK 경로 설정을 시스템 경로로 강제 수정합니다.
+          sed -i "s|#android.sdk_path =|android.sdk_path = /usr/local/lib/android/sdk|g" buildozer.spec
+          sed -i "s|#android.ndk_path =|android.ndk_path = /usr/local/lib/android/sdk/ndk/27.3.13750724|g" buildozer.spec
+          sed -i "s|android.accept_sdk_license = 0|android.accept_sdk_license = 1|g" buildozer.spec
+
+          # 2. 라이선스 파일 선제 생성 (시스템 경로 기준)
+          sudo mkdir -p /usr/local/lib/android/sdk/licenses
+          echo -e "8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb7437c3550b3118b226\n24333f8a71b3d813477583b0b00a6fe40192f722" | sudo tee /usr/local/lib/android/sdk/licenses/android-sdk-license
+
+          # 3. 권한 해제 (가장 강력하게)
+          sudo chmod -R 777 /usr/local/lib/android/sdk
+
+          # 4. 빌드 수행
+          # 환경변수와 함께 실행하여 Buildozer의 독단을 막습니다.
           export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
           export ANDROID_HOME=/usr/local/lib/android/sdk
-          export PATH=$PATH:/usr/local/lib/android/sdk/cmdline-tools/latest/bin:/usr/local/lib/android/sdk/platform-tools
-          
-          # 4. 권한 부여 후 빌드
-          sudo chmod -R 777 /usr/local/lib/android/sdk || true
           buildozer -v android debug
 
       - name: Upload APK
