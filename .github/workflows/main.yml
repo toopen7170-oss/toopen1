@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -20,42 +20,28 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libsqlite3-dev python3-setuptools libffi-dev build-essential zip libltdl-dev
+          sudo apt-get install -y libsqlite3-dev python3-setuptools libffi-dev build-essential zip libltdl-dev ffmpeg libssl-dev
           pip install --upgrade pip
           pip install Cython==0.29.33 buildozer kivy kivymd pillow requests
 
       - name: Build with Buildozer
         run: |
-          # 1. SDK 타겟 경로 및 필수 폴더 강제 생성
-          SDK_TARGET="/home/runner/.buildozer/android/platform/android-sdk"
-          mkdir -p "$SDK_TARGET/cmdline-tools/latest/bin"
-          mkdir -p "$SDK_TARGET/tools/bin"
-          mkdir -p "$SDK_TARGET/licenses"
+          # [핵심 수리] 시스템 SDK/NDK 경로 강제 주입 (가장 확실한 방법)
+          export ANDROID_HOME=$ANDROID_HOME
+          export ANDROID_NDK_HOME=$ANDROID_NDK_LATEST_HOME
           
-          # 2. [라이선스 제압] 모든 해시값 전수 주입
-          echo -e "8933bad161af4178b1185d1a37fbf41ea5269c55\n2c06d49fab45057e65163b5dedf2902da9c62b36\n233cb74c0a8ecf4afb00fb1067afd74d239b26b1\nd56f5187479451eabf01fb7437c3550b3118b226\n24333f8a71b3d813477583b0b00a6fe40192f722" > "$SDK_TARGET/licenses/android-sdk-license"
+          # 빌드 도구 실행 권한 전수 부여
+          sudo chmod -R 777 /usr/local/lib/android/sdk/build-tools || true
           
-          # 3. [경로 오류 해결] 시스템 sdkmanager를 Buildozer 예상 경로로 강제 매핑
-          SYS_SDK_MGR=$(find /usr/local/lib/android/sdk/cmdline-tools -name sdkmanager | head -n 1)
-          if [ -n "$SYS_SDK_MGR" ]; then
-            ln -sf "$SYS_SDK_MGR" "$SDK_TARGET/tools/bin/sdkmanager"
-            ln -sf "$SYS_SDK_MGR" "$SDK_TARGET/cmdline-tools/latest/bin/sdkmanager"
-          fi
+          # 라이선스 자동 수락 및 빌드 환경 초기화
+          mkdir -p ~/.android && touch ~/.android/repositories.cfg
+          yes | buildozer android licenses
           
-          # 4. [권한 오류 제압] 시스템 SDK 및 aidl 도구에 실행 권한 부여
-          sudo chmod +x -R /usr/local/lib/android/sdk || true
-          mkdir -p "$SDK_TARGET/build-tools/34.0.0"
-          REAL_AIDL=$(find /usr/local/lib/android/sdk -name aidl | head -n 1)
-          if [ -n "$REAL_AIDL" ]; then
-            sudo ln -sf "$REAL_AIDL" "$SDK_TARGET/build-tools/34.0.0/aidl"
-            sudo chmod 777 "$SDK_TARGET/build-tools/34.0.0/aidl" || true
-          fi
-
-          # 5. 빌드 실행
+          # 빌드 수행 (경로 탐색 오류 해결 버전)
           buildozer -v android debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: PT1-Manager-Final-Build
+          name: PT1-Final-Build
           path: bin/*.apk
