@@ -1,20 +1,42 @@
-# ... (상단 생략)
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsqlite3-dev python3-setuptools libffi-dev build-essential zip libltdl-dev
+          pip install --upgrade pip
+          pip install Cython==0.29.33 buildozer kivy kivymd pillow requests
+
       - name: Build with Buildozer
         run: |
-          # 1. SDK 및 라이선스 경로 강제 생성
+          # 1. SDK 타겟 경로 설정
           SDK_TARGET="/home/runner/.buildozer/android/platform/android-sdk"
           mkdir -p "$SDK_TARGET/licenses"
           
-          # 2. [라이선스 제압] 37.0.0 대응 포함 모든 해시값 주입
-          # 사용자님이 주신 해시값과 시스템 요구 해시값을 모두 병합했습니다.
+          # 2. [오류해결] 모든 라이선스 해시 주입 (Build-tools 37 포함)
           echo -e "8933bad161af4178b1185d1a37fbf41ea5269c55\n2c06d49fab45057e65163b5dedf2902da9c62b36\n233cb74c0a8ecf4afb00fb1067afd74d239b26b1\nd56f5187479451eabf01fb7437c3550b3118b226\n24333f8a71b3d813477583b0b00a6fe40192f722" > "$SDK_TARGET/licenses/android-sdk-license"
           
-          # 3. [권한 오류 제압] 모든 실행 파일에 권한 강제 부여
-          # 로그에서 발생한 PermissionError를 원천 차단합니다.
-          chmod +x -R "$SDK_TARGET" || true
-
-          # 4. [경로 고착] 구형/신형 sdkmanager 및 aidl 링크 생성
-          # 로그의 'Search for Aidl' 단계에서 오류가 나지 않도록 물리적 링크를 겁니다.
+          # 3. [오류해결] Permission Denied 차단 (권한 강제 부여)
+          chmod +x -R /usr/local/lib/android/sdk || true
+          
+          # 4. [오류해결] aidl 경로 물리적 고착
           mkdir -p "$SDK_TARGET/build-tools/34.0.0"
           REAL_AIDL=$(find /usr/local/lib/android/sdk -name aidl | head -n 1)
           if [ -f "$REAL_AIDL" ]; then
@@ -24,3 +46,9 @@
 
           # 5. 빌드 실행
           buildozer -v android debug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PT1-Manager-Final
+          path: bin/*.apk
