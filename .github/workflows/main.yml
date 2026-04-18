@@ -26,19 +26,20 @@ jobs:
 
       - name: Build with Buildozer
         run: |
-          # 1. 시스템 SDK 경로 고착
-          export ANDROID_HOME=$ANDROID_HOME
+          # 1. SDK 경로 설정
+          export ANDROID_HOME=/usr/local/lib/android/sdk
           
-          # 2. [오류해결] Buildozer 명령어 대신 sdkmanager로 직접 라이선스 승인
-          # 'Unknown command licenses' 오류를 원천 차단합니다.
+          # 2. [핵심 수리] 라이선스 파일 직접 생성 (가장 확실한 방법)
+          # sdkmanager가 가끔 말을 안 들을 때를 대비해, 승인 파일에 모든 해시값을 직접 주입합니다.
           mkdir -p ~/.android && touch ~/.android/repositories.cfg
-          yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          mkdir -p $ANDROID_HOME/licenses
+          echo -e "8933bad161af4178b1185d1a37fbf41ea5269c55\n2c06d49fab45057e65163b5dedf2902da9c62b36\n233cb74c0a8ecf4afb00fb1067afd74d239b26b1\nd56f5187479451eabf01fb7437c3550b3118b226\n24333f8a71b3d813477583b0b00a6fe40192f722" > $ANDROID_HOME/licenses/android-sdk-license
           
-          # 3. 권한 강제 부여 (Permission denied 방어)
-          sudo chmod -R 777 /usr/local/lib/android/sdk || true
-          
-          # 4. 빌드 수행
-          # --profile을 제거하고 가장 표준적인 디버그 빌드를 진행합니다.
+          # 3. [오류 차단] Buildozer가 자기 폴더를 만들 때 라이선스 때문에 멈추지 않게 함
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+          # 4. 권한 부여 및 빌드 실행
+          sudo chmod -R 777 $ANDROID_HOME || true
           buildozer -v android debug
 
       - name: Upload APK
