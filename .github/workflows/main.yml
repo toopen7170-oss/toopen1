@@ -26,20 +26,23 @@ jobs:
 
       - name: Build with Buildozer
         run: |
-          # 1. Buildozer가 SDK를 설치할 경로를 미리 정의
+          # 1. Buildozer SDK 경로 정의
           BUILDOZER_SDK_DIR="/home/runner/.buildozer/android/platform/android-sdk"
+          
+          # 2. 라이선스 자동 승인 (이전 성공 로직 유지)
           mkdir -p "$BUILDOZER_SDK_DIR/licenses"
-          
-          # 2. [오류 정밀 타격] 모든 버전(37 포함)의 라이선스 승인 해시값을 직접 주입
-          # 이 파일이 있으면 서버는 더 이상 "Accept? (y/N)"을 묻지 않습니다.
           echo -e "8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb7437c3550b3118b226\n24333f8a71b3d813477583b0b00a6fe40192f722\n84831b9409646a918e30573bab4c9c91346d8abd\n49a384c23f413f170d10b002447171d9d435017a" > "$BUILDOZER_SDK_DIR/licenses/android-sdk-license"
-          echo -e "84831b9409646a918e30573bab4c9c91346d8abd\n50466765fdc03f962884445487f47491075771fb" > "$BUILDOZER_SDK_DIR/licenses/android-sdk-preview-license"
           
-          # 3. 시스템 SDK에서도 라이선스를 미리 승인 (이중 보안)
-          yes | sudo /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          
-          # 4. 빌드 수행
-          # 로그를 상세히 보기 위해 -v 옵션을 유지합니다.
+          # 3. [긴급 수리] sdkmanager 경로 강제 동기화
+          # 시스템의 최신 도구를 Buildozer가 찾는 구형 경로로 강제 복사합니다.
+          mkdir -p "$BUILDOZER_SDK_DIR/tools/bin"
+          SYS_SDK_MGR="/usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager"
+          if [ -f "$SYS_SDK_MGR" ]; then
+            cp "$SYS_SDK_MGR" "$BUILDOZER_SDK_DIR/tools/bin/sdkmanager"
+            chmod +x "$BUILDOZER_SDK_DIR/tools/bin/sdkmanager"
+          fi
+
+          # 4. 빌드 수행 (이제 경로를 찾을 수 있습니다)
           buildozer -v android debug
 
       - name: Upload APK
