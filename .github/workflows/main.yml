@@ -26,20 +26,21 @@ jobs:
 
       - name: Build with Buildozer
         run: |
-          # 1. SDK 타겟 경로 설정
+          # 1. SDK 경로 및 라이선스 폴더 강제 생성
           SDK_TARGET="/home/runner/.buildozer/android/platform/android-sdk"
           mkdir -p "$SDK_TARGET/licenses"
           
-          # 2. [오류해결] 모든 라이선스 해시 주입 (Build-tools 37 포함)
+          # 2. [오류 0개 고착] 모든 라이선스 해시 주입 (Build-tools 37 대응)
           echo -e "8933bad161af4178b1185d1a37fbf41ea5269c55\n2c06d49fab45057e65163b5dedf2902da9c62b36\n233cb74c0a8ecf4afb00fb1067afd74d239b26b1\nd56f5187479451eabf01fb7437c3550b3118b226\n24333f8a71b3d813477583b0b00a6fe40192f722" > "$SDK_TARGET/licenses/android-sdk-license"
           
-          # 3. [오류해결] Permission Denied 차단 (권한 강제 부여)
-          chmod +x -R /usr/local/lib/android/sdk || true
+          # 3. [권한 오류 제압] 동적 권한 부여 로직
+          # 특정 버전에 국한되지 않고 시스템의 모든 SDK 도구에 실행 권한을 강제합니다.
+          sudo chmod +x -R /usr/local/lib/android/sdk || true
           
-          # 4. [오류해결] aidl 경로 물리적 고착
+          # 4. [aidl 경로 고착] 48번 성공 로직의 환경 보강
           mkdir -p "$SDK_TARGET/build-tools/34.0.0"
           REAL_AIDL=$(find /usr/local/lib/android/sdk -name aidl | head -n 1)
-          if [ -f "$REAL_AIDL" ]; then
+          if [ -n "$REAL_AIDL" ]; then
             ln -sf "$REAL_AIDL" "$SDK_TARGET/build-tools/34.0.0/aidl"
             chmod +x "$SDK_TARGET/build-tools/34.0.0/aidl"
           fi
@@ -50,5 +51,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: PT1-Manager-Final
+          name: PT1-Manager-Final-Build
           path: bin/*.apk
