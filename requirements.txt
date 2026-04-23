@@ -1,5 +1,3 @@
 kivy
-kivymd
-pillow
 requests
 plyer
