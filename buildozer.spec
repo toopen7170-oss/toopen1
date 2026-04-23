@@ -14,10 +14,10 @@ requirements = python3,kivy,requests,plyer
 orientation = portrait
 fullscreen = 1
 
-android.api = 33
+android.api = 34
 android.minapi = 24
 android.ndk = 25b
-android.build_tools_version = 33.0.2
+android.build_tools_version = 34.0.0
 android.archs = arm64-v8a
 
 android.permissions = READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE
