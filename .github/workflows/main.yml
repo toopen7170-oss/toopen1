@@ -1,4 +1,4 @@
-name: Build APK (DOCKER FIXED ROOT ISSUE)
+name: Build APK (DOCKER NON-ROOT FINAL)
 
 on:
   push:
@@ -13,16 +13,14 @@ jobs:
       - name: 1. 체크아웃
         uses: actions/checkout@v4
 
-      - name: 2. Docker APK 빌드 (root 자동 통과)
+      - name: 2. Docker APK 빌드 (non-root 실행)
         run: |
           docker run --rm \
+            -u $(id -u):$(id -g) \
             -v ${{ github.workspace }}:/home/user/app \
+            -w /home/user/app \
             kivy/buildozer:latest \
-            bash -c "
-              cd /home/user/app && \
-              yes | buildozer android clean && \
-              yes | buildozer -v android debug
-            "
+            buildozer android clean debug
 
       - name: 3. APK 업로드
         uses: actions/upload-artifact@v4
