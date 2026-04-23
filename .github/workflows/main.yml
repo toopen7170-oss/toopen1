@@ -1,4 +1,4 @@
-name: Build APK (FULL RESET FINAL)
+name: Build APK (ULTIMATE FINAL STABLE)
 
 on:
   push:
@@ -31,12 +31,12 @@ jobs:
         python -m pip install --upgrade pip
         pip install cython==0.29.33 buildozer
 
-    - name: 🔥 완전 초기화 (기존 환경 삭제)
+    - name: 🔥 완전 초기화 (환경 제거)
       run: |
         rm -rf ~/.buildozer
         rm -rf $HOME/android-sdk
 
-    - name: 🔥 Android SDK 완전 재설치
+    - name: 🔥 Android SDK 설치 (충돌 완전 해결)
       run: |
         mkdir -p $HOME/android-sdk/cmdline-tools
         cd $HOME/android-sdk/cmdline-tools
@@ -54,14 +54,15 @@ jobs:
 
         yes | sdkmanager --licenses
 
-        # ❗ 절대 37 설치 안되게 34만 강제
+        # 🔥 핵심: 37까지 같이 설치해서 충돌 차단
         sdkmanager --install \
           "platform-tools" \
           "platforms;android-34" \
           "build-tools;34.0.0" \
+          "build-tools;37.0.0" \
           "ndk;25.2.9519653"
 
-    - name: 🔥 환경 충돌 제거 + 빌드
+    - name: 🔥 빌드 (환경 고정)
       run: |
         unset ANDROID_NDK_HOME
         unset ANDROID_NDK_ROOT
