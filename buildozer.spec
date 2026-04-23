@@ -9,13 +9,11 @@ source.include_exts = py,png,jpg,kv,atlas,ttf
 
 version = 1.0
 
-# 🔥 안정 조합
 requirements = python3,kivy,requests,plyer
 
 orientation = portrait
 fullscreen = 1
 
-# 🔥 완전 고정 (핵심)
 android.api = 33
 android.minapi = 24
 android.ndk = 25b
