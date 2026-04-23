@@ -1,27 +1,27 @@
 [app]
-title = RPG_Final_Manager
-package.name = rpg.manager.toopen
-package.domain = org.toopen
+
+title = PristonTale
+package.name = pt1
+package.domain = org.test
+
 source.dir = .
-source.include_exts = py,png,jpg,kv,atlas
+source.include_exts = py,png,jpg,kv,atlas,ttf
+
 version = 1.0
 
-# [제1원칙 고정] NDK r26b 및 Android API 34 설정
-android.api = 34
-android.minapi = 21
-android.ndk = 26b
-android.ndk_api = 21
+# 🔥 안정 조합
+requirements = python3,kivy,requests,plyer
+
+orientation = portrait
+fullscreen = 1
+
+# 🔥 완전 고정 (핵심)
+android.api = 33
+android.minapi = 24
+android.ndk = 25b
+android.build_tools_version = 33.0.2
 android.archs = arm64-v8a
 
-# [빌드 정합성]
-p4a.branch = master
-android.skip_update_dependencies = False
-android.copy_libs = 1
+android.permissions = READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE
 
-# [목록 무결성 및 권한]
-requirements = python3,kivy==2.3.0,kivymd==1.2.0,pillow,requests,openssl
-android.permissions = READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE, INTERNET, CAMERA, READ_MEDIA_IMAGES
-
-[buildozer]
 log_level = 2
-warn_on_root = 1
