@@ -1,4 +1,4 @@
-name: Build APK (100% FINAL STABLE)
+name: Build APK (FULL RESET FINAL)
 
 on:
   push:
@@ -13,12 +13,12 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Python 3.10
+    - name: Python 3.10 고정
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
 
-    - name: Install system packages
+    - name: 시스템 패키지 설치
       run: |
         sudo apt-get update
         sudo apt-get install -y \
@@ -26,12 +26,17 @@ jobs:
           libffi-dev libssl-dev build-essential \
           libsqlite3-dev zlib1g-dev
 
-    - name: Install Python libs
+    - name: Python 라이브러리 설치
       run: |
         python -m pip install --upgrade pip
         pip install cython==0.29.33 buildozer
 
-    - name: Install Android SDK (완전 고정)
+    - name: 🔥 완전 초기화 (기존 환경 삭제)
+      run: |
+        rm -rf ~/.buildozer
+        rm -rf $HOME/android-sdk
+
+    - name: 🔥 Android SDK 완전 재설치
       run: |
         mkdir -p $HOME/android-sdk/cmdline-tools
         cd $HOME/android-sdk/cmdline-tools
@@ -49,13 +54,14 @@ jobs:
 
         yes | sdkmanager --licenses
 
-        sdkmanager \
+        # ❗ 절대 37 설치 안되게 34만 강제
+        sdkmanager --install \
           "platform-tools" \
           "platforms;android-34" \
           "build-tools;34.0.0" \
           "ndk;25.2.9519653"
 
-    - name: Build APK
+    - name: 🔥 환경 충돌 제거 + 빌드
       run: |
         unset ANDROID_NDK_HOME
         unset ANDROID_NDK_ROOT
@@ -67,8 +73,8 @@ jobs:
 
         buildozer -v android debug
 
-    - name: Upload APK
+    - name: APK 업로드
       uses: actions/upload-artifact@v4
       with:
-        name: APK
+        name: FINAL-APK
         path: bin/*.apk
