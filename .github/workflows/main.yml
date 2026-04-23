@@ -1,4 +1,4 @@
-name: Build APK (FINAL CLEAN NO-CRASH)
+name: Build APK (DOCKER 100% SUCCESS)
 
 on:
   push:
@@ -7,77 +7,25 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     steps:
       - name: 1. 체크아웃
         uses: actions/checkout@v4
 
-      - name: 2. Python 3.10 고정
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
-      - name: 3. 시스템 패키지 설치
+      - name: 2. Docker APK 빌드
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            zip unzip openjdk-17-jdk \
-            libffi-dev libssl-dev build-essential \
-            libsqlite3-dev zlib1g-dev
+          docker run --rm \
+            -v ${{ github.workspace }}:/home/user/app \
+            kivy/buildozer:latest \
+            bash -c "
+              cd /home/user/app && \
+              buildozer android clean && \
+              buildozer -v android debug
+            "
 
-      - name: 4. Python 설치
-        run: |
-          python -m pip install --upgrade pip
-          pip install "setuptools<60" cython==0.29.33 buildozer
-
-      - name: 5. 🔥 완전 초기화 (캐시 제거)
-        run: |
-          rm -rf .buildozer
-          rm -rf ~/.buildozer
-          rm -rf ~/android-sdk
-
-      - name: 6. 🔥 Android SDK 설치 (충돌 방지 버전)
-        run: |
-          mkdir -p $HOME/android-sdk/cmdline-tools
-          cd $HOME/android-sdk/cmdline-tools
-
-          wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O tools.zip
-          unzip tools.zip
-          mv cmdline-tools latest
-
-          # 🔥 sdkmanager 경로 강제 생성 (핵심)
-          mkdir -p $HOME/android-sdk/tools/bin
-          ln -s $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager $HOME/android-sdk/tools/bin/sdkmanager
-
-          export ANDROID_HOME=$HOME/android-sdk
-          export ANDROID_SDK_ROOT=$ANDROID_HOME
-          export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
-
-          yes | sdkmanager --licenses
-
-          # 🔥 절대 37 설치 안함
-          sdkmanager \
-            "platform-tools" \
-            "platforms;android-33" \
-            "build-tools;33.0.2" \
-            "ndk;25.2.9519653"
-
-      - name: 7. 🔥 환경 변수 충돌 제거 + 빌드
-        run: |
-          unset ANDROID_NDK_HOME
-          unset ANDROID_NDK_ROOT
-          unset ANDROID_NDK
-
-          export ANDROID_HOME=$HOME/android-sdk
-          export ANDROID_SDK_ROOT=$ANDROID_HOME
-          export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
-
-          buildozer android clean
-          buildozer -v android debug
-
-      - name: 8. APK 업로드
+      - name: 3. APK 업로드
         uses: actions/upload-artifact@v4
         with:
-          name: FINAL-APK
+          name: APK
           path: bin/*.apk
