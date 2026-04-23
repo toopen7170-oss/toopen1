@@ -52,7 +52,7 @@ jobs:
           "build-tools;33.0.2" \
           "ndk;25.2.9519653"
 
-    - name: Build APK (clean 제거 안정화)
+    - name: Build APK (clean 제거)
       run: |
         unset ANDROID_NDK_HOME
         unset ANDROID_NDK_ROOT
