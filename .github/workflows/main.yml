@@ -1,4 +1,4 @@
-name: Build APK (REAL FINAL FIX)
+name: Build APK (REAL FINAL STABLE)
 
 on:
   push:
@@ -52,7 +52,7 @@ jobs:
           "build-tools;33.0.2" \
           "ndk;25.2.9519653"
 
-    - name: Build APK
+    - name: Build APK (clean 제거 안정화)
       run: |
         unset ANDROID_NDK_HOME
         unset ANDROID_NDK_ROOT
@@ -62,7 +62,6 @@ jobs:
         export ANDROID_SDK_ROOT=$ANDROID_HOME
         export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
 
-        buildozer android clean
         buildozer -v android debug
 
     - name: Upload APK
